@@ -228,6 +228,10 @@ impl SwimInterface {
             KeyCode::F2 => self.switch_active(Active::TopRight),
             KeyCode::F3 => self.switch_active(Active::BottomLeft),
             KeyCode::F4 => self.switch_active(Active::BottomRight),
+            KeyCode::ArrowLeft => self.text_editors[self.active as usize].arrow_left(),
+            KeyCode::ArrowRight => self.text_editors[self.active as usize].arrow_right(),
+            KeyCode::ArrowUp => self.text_editors[self.active as usize].arrow_up(),
+            KeyCode::ArrowDown => self.text_editors[self.active as usize].arrow_down(),
             _ => {}
         }
     }

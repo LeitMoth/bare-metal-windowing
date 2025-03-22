@@ -150,4 +150,48 @@ impl TextEditor {
             }
         }
     }
+
+    pub fn arrow_left(&mut self) {
+        if self.cursor.col == 0 {
+            if self.cursor.line == 0 {
+                return;
+            } else {
+                self.cursor.line -= 1;
+                self.cursor.col = self.doc[self.cursor.line].len
+            }
+        } else {
+            self.cursor.col -= 1
+        }
+    }
+
+    pub fn arrow_right(&mut self) {
+        if self.cursor.col == self.doc[self.cursor.line].len {
+            if self.cursor.line == DOC_LINES - 1 {
+                return;
+            } else {
+                self.cursor.line += 1;
+                self.cursor.col = 0
+            }
+        } else {
+            self.cursor.col += 1
+        }
+    }
+
+    pub fn arrow_up(&mut self) {
+        if self.cursor.line == 0 {
+            return;
+        } else {
+            self.cursor.line -= 1;
+            self.cursor.col = usize::min(self.cursor.col, self.doc[self.cursor.line].len)
+        }
+    }
+
+    pub fn arrow_down(&mut self) {
+        if self.cursor.line == DOC_LINES - 1 {
+            return;
+        } else {
+            self.cursor.line += 1;
+            self.cursor.col = usize::min(self.cursor.col, self.doc[self.cursor.line].len)
+        }
+    }
 }
