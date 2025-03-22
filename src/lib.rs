@@ -205,7 +205,7 @@ impl SwimInterface {
     fn draw_current(&self) {
         for t in &self.text_editors {
             t.draw();
-            t.window.dbgdraw()
+            // t.window.dbgdraw()
         }
     }
 
@@ -233,6 +233,9 @@ impl SwimInterface {
     }
 
     fn handle_unicode(&mut self, key: char) {
+        if key == '\n' {
+            self.text_editors[self.active as usize].newline();
+        }
         if is_drawable(key) {
             self.text_editors[self.active as usize].putc(key);
         }

@@ -21,6 +21,13 @@ impl Window {
         }
     }
 
+    fn height(&self) -> usize {
+        (self.y2 - self.y1 + 1) as usize
+    }
+    fn width(&self) -> usize {
+        (self.x2 - self.x1 + 1) as usize
+    }
+
     pub fn dbgdraw(&self) {
         let dbgcolor = ColorCode::new(Color::Black, Color::LightGreen);
         plot('#', self.x1 as usize, self.y1 as usize, dbgcolor);
@@ -98,13 +105,20 @@ impl TextEditor {
         // mark dirty?
     }
 
+    pub fn newline(&mut self) {
+        self.cursor.line += 1;
+        self.cursor.col = 0;
+        if self.cursor.line >= DOC_LINES {
+            self.cursor.line = DOC_LINES - 1
+        }
+    }
+
     pub fn draw(&self) {
         let gray = ColorCode::new(Color::LightGray, Color::Black);
-
-        for row in 0..8 {
-            for col in 0..self.doc[row].len {
-                let c = self.doc[row].data[col];
-                self.window.plot(c, col as u8, row as u8, gray);
+        for row in 0..self.window.height() {
+            for col in 0..self.window.width() {
+                self.window
+                    .plot(self.doc[row].data[col], col as u8, row as u8, gray);
             }
         }
     }
