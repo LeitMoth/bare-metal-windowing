@@ -202,8 +202,8 @@ impl SwimInterface {
     //     }
     // }
 
-    fn draw_current(&self) {
-        for t in &self.text_editors {
+    fn draw_current(&mut self) {
+        for t in &mut self.text_editors {
             t.draw();
             // t.window.dbgdraw()
         }

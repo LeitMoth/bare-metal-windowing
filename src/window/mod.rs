@@ -173,39 +173,186 @@ impl TextEditor {
     }
 
     // take x,y in buffer, find data line, col
-    fn reverse_lookup(&self, x: usize, y: usize) -> (usize, usize) {
-        return (y, x);
-    }
+    // fn reverse_lookup(&self, x: usize, y: usize) -> (usize, usize) {
+    //     let row = self.scroll;
+    //
+    //     let line = 0;
+    //
+    //     loop {
+    //         self.doc[line].len
+    //     }
+    //
+    //     for l in &self.doc {
+    //         l.
+    //     }
+    //
+    //     let row = row + count_wrapped_until(row);
+    //
+    //     let x = return (y, x);
+    // }
 
-    pub fn draw(&self) {
+    // returns the number of rows that it took
+    fn drawline_bottom(&self, line: usize, bottom_target: i64) -> i64 {
         let gray = ColorCode::new(Color::LightGray, Color::Black);
         let gray_inv = ColorCode::new(Color::Black, Color::LightGray);
-        for y in 0..self.window.height() {
-            for x in 0..self.window.width() {
-                let (line, col) = self.reverse_lookup(x, y);
 
-                if line >= DOC_LINES {
-                    continue;
-                }
+        let rows_needed = (self.doc[line].len / self.window.width() + 1) as i64;
+        let len = rows_needed * self.window.width() as i64;
 
-                let mut c = self.doc[line].data[col];
+        for i in 0..len {
+            let y = i / self.window.width() as i64;
+            let x = i % self.window.width() as i64;
 
-                if self.doc[line].len == x {
-                    c = '#'
-                };
+            let c = *self.doc[line].data.get(i as usize).unwrap_or(&' ');
 
-                self.window.plot(
-                    c,
-                    x as u8,
-                    y as u8,
-                    if line == self.cursor.line && col == self.cursor.col {
-                        gray_inv
-                    } else {
-                        gray
-                    },
-                );
+            let row = bottom_target - (rows_needed - 1) + y;
+            if row < 0 {
+                break;
             }
+            self.window.plot(
+                c,
+                x as u8,
+                row as u8,
+                if line == self.cursor.line && i == self.cursor.col as i64 {
+                    gray_inv
+                } else {
+                    gray
+                },
+            );
         }
+
+        rows_needed as i64
+    }
+
+    fn keep_cursor_on_screen(&mut self) {
+        let mut total = 0;
+        for line in self.scroll..=self.cursor.line {
+            let rows_needed = if line == self.cursor.line {
+                self.cursor.col / self.window.width() + 1
+            } else {
+                self.doc[line].len / self.window.width() + 1
+            };
+
+            total += rows_needed;
+        }
+
+        if total == 0 {
+            self.scroll = self.cursor.line;
+        } else if total >= self.window.height() {
+            self.scroll += total - self.window.height()
+        }
+    }
+
+    fn drawline(&self, line: usize, y_base: usize) -> usize {
+        let gray = ColorCode::new(Color::LightGray, Color::Black);
+        let gray_inv = ColorCode::new(Color::Black, Color::LightGray);
+
+        let rows_needed = self.doc[line].len / self.window.width() + 1;
+        let len = rows_needed * self.window.width();
+
+        for i in 0..len {
+            let y = i / self.window.width() + y_base;
+            let x = i % self.window.width();
+
+            let c = *self.doc[line].data.get(i as usize).unwrap_or(&' ');
+
+            if y >= self.window.height() {
+                break;
+            }
+            self.window.plot(
+                c,
+                x as u8,
+                y as u8,
+                if line == self.cursor.line && i == self.cursor.col {
+                    gray_inv
+                } else {
+                    gray
+                },
+            );
+        }
+
+        rows_needed
+    }
+
+    pub fn draw(&mut self) {
+        self.keep_cursor_on_screen();
+
+        // let gray = ColorCode::new(Color::LightGray, Color::Black);
+        // let gray_inv = ColorCode::new(Color::Black, Color::LightGray);
+
+        let mut used = 0;
+        let mut line = self.scroll;
+
+        while used < self.window.height() {
+            used += self.drawline(line, used);
+            line += 1
+        }
+        // let mut space = self.window.height() as i64;
+        //
+        // let mut bottom_line = (self.scroll + self.window.height()) as i64;
+        //
+        // while space > 0 && bottom_line >= 0 {
+        //     space -= self.drawline_bottom(bottom_line as usize, space - 1);
+        //     bottom_line -= 1
+        // }
+        //
+        // let mut y = 0;
+        // while y < self.window.height() {
+        //     let line = y + self.scroll;
+        //     for col in 0..=self.doc[line].len {
+        //         let x = col % self.window.width();
+        //         if col > 0 && x == 0 {
+        //             y += 1;
+        //         }
+        //
+        //         let c = self.doc[line].data[col];
+        //
+        //         self.window.plot(
+        //             c,
+        //             x as u8,
+        //             y as u8,
+        //             if line == self.cursor.line && col == self.cursor.col {
+        //                 gray_inv
+        //             } else {
+        //                 gray
+        //             },
+        //         );
+        //     }
+        //     for x in (self.doc[line].len + 1) % self.window.width()..self.window.width() {
+        //         self.window.plot(' ', x as u8, y as u8, gray);
+        //     }
+        //
+        //     y += 1;
+        // }
+        // for y in 0..self.window.height() {
+        //     let line = y + self.scroll;
+        // }
+        // for y in 0..self.window.height() {
+        //     for x in 0..self.window.width() {
+        //         let (line, col) = self.reverse_lookup(x, y);
+        //
+        //         if line >= DOC_LINES {
+        //             continue;
+        //         }
+        //
+        //         let mut c = self.doc[line].data[col];
+        //
+        //         if self.doc[line].len == x {
+        //             c = '#'
+        //         };
+        //
+        //         self.window.plot(
+        //             c,
+        //             x as u8,
+        //             y as u8,
+        //             if line == self.cursor.line && col == self.cursor.col {
+        //                 gray_inv
+        //             } else {
+        //                 gray
+        //             },
+        //         );
+        //     }
+        // }
     }
 
     pub fn arrow_left(&mut self) {
