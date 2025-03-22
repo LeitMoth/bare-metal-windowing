@@ -68,6 +68,7 @@ struct Cursor {
 }
 
 const DOC_LINES: usize = WINDOW_ROWS * 4;
+// const DOC_LINES: usize = 5;
 
 pub struct TextEditor {
     doc: [Line; DOC_LINES],
@@ -108,12 +109,29 @@ impl TextEditor {
         self.doc[self.cursor.line].len += 1;
         self.doc[self.cursor.line].data[self.cursor.col] = c;
         self.cursor.col += 1;
-
-        // TODO(colin): update scroll here if necessary
-        // mark dirty?
     }
 
     pub fn newline(&mut self) {
+        if self.cursor.line + 1 >= DOC_LINES {
+            return;
+        }
+
+        let end = DOC_LINES - 1;
+        let start = self.cursor.line;
+        for i in (start + 2..=end).rev() {
+            self.doc[i] = self.doc[i - 1];
+        }
+
+        self.doc[self.cursor.line + 1] = Default::default();
+        for i in self.cursor.col..self.doc[self.cursor.line].len {
+            self.doc[self.cursor.line + 1].data[i - self.cursor.col] =
+                self.doc[self.cursor.line].data[i];
+            self.doc[self.cursor.line + 1].len += 1;
+
+            self.doc[self.cursor.line].data[i] = ' ';
+            self.doc[self.cursor.line].len -= 1;
+        }
+
         self.cursor.line += 1;
         self.cursor.col = 0;
         if self.cursor.line >= DOC_LINES {
@@ -165,6 +183,10 @@ impl TextEditor {
         for y in 0..self.window.height() {
             for x in 0..self.window.width() {
                 let (line, col) = self.reverse_lookup(x, y);
+
+                if line >= DOC_LINES {
+                    continue;
+                }
 
                 let mut c = self.doc[line].data[col];
 
