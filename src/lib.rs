@@ -244,7 +244,7 @@ impl SwimInterface {
         match key {
             ASCII_ENTER => self.text_editors[self.active as usize].newline(),
             ASCII_BS | ASCII_DEL => self.text_editors[self.active as usize].backspace(),
-            k if is_drawable(k) => self.text_editors[self.active as usize].putc(key),
+            k if is_drawable(k) => self.text_editors[self.active as usize].insert_char(key),
             _ => {}
         }
     }

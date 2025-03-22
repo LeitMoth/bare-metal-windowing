@@ -91,16 +91,24 @@ impl TextEditor {
         }
     }
 
-    pub fn putc(&mut self, c: char) {
+    pub fn insert_char(&mut self, c: char) {
         self.sanity();
 
         // let r = &mut self.doc[self.cursor.line].data[0..self.doc[self.cursor.line].len];
         if self.doc[self.cursor.line].len >= 255 {
             return;
         }
+        if self.doc[self.cursor.line].len != self.cursor.col {
+            let end = self.doc[self.cursor.line].len;
+            let start = self.cursor.col + 1;
+            for i in (start..=end).rev() {
+                self.doc[self.cursor.line].data[i] = self.doc[self.cursor.line].data[i - 1];
+            }
+        }
         self.doc[self.cursor.line].len += 1;
         self.doc[self.cursor.line].data[self.cursor.col] = c;
         self.cursor.col += 1;
+
         // TODO(colin): update scroll here if necessary
         // mark dirty?
     }
