@@ -2,21 +2,13 @@
 
 mod window;
 
-use num::Integer;
 use pc_keyboard::{DecodedKey, KeyCode};
 use pluggable_interrupt_os::vga_buffer::{
-    clear_screen, is_drawable, plot, Color, ColorCode, BUFFER_HEIGHT, BUFFER_WIDTH,
+    is_drawable, plot, Color, ColorCode, BUFFER_HEIGHT, BUFFER_WIDTH,
 };
 use window::{TextEditor, Window};
 
-use core::{
-    clone::Clone,
-    cmp::{min, Eq, PartialEq},
-    iter::Iterator,
-    marker::Copy,
-    prelude::rust_2024::derive,
-    slice::SliceIndex,
-};
+use core::prelude::rust_2024::derive;
 
 const WIDTH_LEFT: usize = (BUFFER_WIDTH - 3) / 2;
 const WIDTH_RIGHT: usize = (BUFFER_WIDTH - 3) - WIDTH_LEFT;
@@ -62,19 +54,6 @@ impl Active {
                 plot2(MIDDLE_X * 3 / 2, MIDDLE_Y, 'F', '4');
             }
         }
-    }
-
-    fn draw_f1(active: bool) {
-        let color = ColorCode::new(
-            if active {
-                Color::LightGreen
-            } else {
-                Color::LightGray
-            },
-            Color::DarkGray,
-        );
-        plot('F' as char, MIDDLE_X / 2, 0, color);
-        plot('1' as char, MIDDLE_X / 2 + 1, 0, color);
     }
 
     fn draw(&self, active: bool) {
@@ -180,13 +159,17 @@ impl SwimInterface {
         self.active.draw(true);
     }
     pub fn tick(&mut self) {
-        self.clear_current();
+        // self.clear_current();
+
+        // Each TextEditor should always fill every character
+        // of its window when drawn, so we never need
+        // to clear anything
         self.draw_current();
     }
 
-    fn clear_current(&self) {
-        // clear_screen();
-    }
+    // fn clear_current(&self) {
+    //     clear_screen();
+    // }
 
     // fn draw_border(&self) {
     //     let color = ColorCode::new(Color::DarkGray, Color::LightRed);

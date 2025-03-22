@@ -74,7 +74,7 @@ pub struct TextEditor {
     lines: [Line; DOC_LINES],
     cursor: Cursor,
     scroll: usize,
-    pub window: Window,
+    window: Window,
 }
 
 impl TextEditor {
