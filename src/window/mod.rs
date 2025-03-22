@@ -113,15 +113,36 @@ impl TextEditor {
         }
     }
 
+    // TODO(colin): VERY messy!
+    // break out some helper line functionality to separate methods if you have time later
     pub fn backspace(&mut self) {
         if self.cursor.col == 0 {
             if self.cursor.line == 0 {
                 return;
+            } else {
+                self.cursor.line -= 1;
+                self.cursor.col = self.doc[self.cursor.line].len;
+
+                if self.cursor.line < DOC_LINES - 1 {
+                    for i in 0..self.doc[self.cursor.line + 1].len {
+                        self.doc[self.cursor.line].data[self.doc[self.cursor.line].len] =
+                            self.doc[self.cursor.line + 1].data[i];
+                        self.doc[self.cursor.line].len += 1
+                    }
+                }
+
+                for i in self.cursor.line + 1..DOC_LINES - 1 {
+                    self.doc[i] = self.doc[i + 1];
+                }
+                self.doc[DOC_LINES - 1] = Default::default();
             }
-            self.cursor.line -= 1;
-            self.cursor.col = self.doc[self.cursor.line].len
         } else {
-            self.cursor.col -= 1
+            self.cursor.col -= 1;
+            for i in self.cursor.col..self.doc[self.cursor.line].len - 1 {
+                self.doc[self.cursor.line].data[i] = self.doc[self.cursor.line].data[i + 1]
+            }
+            self.doc[self.cursor.line].data[self.doc[self.cursor.line].len - 1] = ' ';
+            self.doc[self.cursor.line].len -= 1;
         }
     }
 
@@ -136,9 +157,15 @@ impl TextEditor {
         for y in 0..self.window.height() {
             for x in 0..self.window.width() {
                 let (line, col) = self.reverse_lookup(x, y);
-                if line == self.cursor.line && col == self.cursor.col {}
+
+                let mut c = self.doc[line].data[col];
+
+                if self.doc[line].len == x {
+                    c = '#'
+                };
+
                 self.window.plot(
-                    self.doc[line].data[col],
+                    c,
                     x as u8,
                     y as u8,
                     if line == self.cursor.line && col == self.cursor.col {
