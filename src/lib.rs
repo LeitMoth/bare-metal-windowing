@@ -1,10 +1,13 @@
 #![no_std]
 
+mod window;
+
 use num::Integer;
 use pc_keyboard::{DecodedKey, KeyCode};
 use pluggable_interrupt_os::vga_buffer::{
-    is_drawable, plot, Color, ColorCode, BUFFER_HEIGHT, BUFFER_WIDTH,
+    clear_screen, is_drawable, plot, Color, ColorCode, BUFFER_HEIGHT, BUFFER_WIDTH,
 };
+use window::{TextEditor, Window};
 
 use core::{
     clone::Clone,
@@ -12,65 +15,197 @@ use core::{
     iter::Iterator,
     marker::Copy,
     prelude::rust_2024::derive,
+    slice::SliceIndex,
 };
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+const WIDTH_LEFT: usize = (BUFFER_WIDTH - 3) / 2;
+const WIDTH_RIGHT: usize = (BUFFER_WIDTH - 3) - WIDTH_LEFT;
+const HEIGHT_UP: usize = (BUFFER_HEIGHT - 3) / 2;
+const HEIGHT_DOWN: usize = (BUFFER_HEIGHT - 3) - HEIGHT_UP;
+
+const MIDDLE_X: usize = 1 + WIDTH_LEFT;
+const MIDDLE_Y: usize = 1 + HEIGHT_UP;
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Active {
+    TopLeft = 0,
+    TopRight = 1,
+    BottomLeft = 2,
+    BottomRight = 3,
+}
+
+impl Active {
+    fn draw_label(&self, active: bool) {
+        let color = ColorCode::new(
+            if active {
+                Color::LightGreen
+            } else {
+                Color::LightGray
+            },
+            Color::DarkGray,
+        );
+        let plot2 = |x, y, c1, c2| {
+            plot(c1, x, y, color);
+            plot(c2, x + 1, y, color);
+        };
+        match self {
+            Active::TopLeft => {
+                plot2(MIDDLE_X / 2, 0, 'F', '1');
+            }
+            Active::TopRight => {
+                plot2(MIDDLE_X * 3 / 2, 0, 'F', '2');
+            }
+            Active::BottomLeft => {
+                plot2(MIDDLE_X / 2, MIDDLE_Y, 'F', '3');
+            }
+            Active::BottomRight => {
+                plot2(MIDDLE_X * 3 / 2, MIDDLE_Y, 'F', '4');
+            }
+        }
+    }
+
+    fn draw_f1(active: bool) {
+        let color = ColorCode::new(
+            if active {
+                Color::LightGreen
+            } else {
+                Color::LightGray
+            },
+            Color::DarkGray,
+        );
+        plot('F' as char, MIDDLE_X / 2, 0, color);
+        plot('1' as char, MIDDLE_X / 2 + 1, 0, color);
+    }
+
+    fn draw(&self, active: bool) {
+        let (x1, y1, x2, y2) = match self {
+            Active::TopLeft => (0, 0, MIDDLE_X, MIDDLE_Y),
+            Active::TopRight => (MIDDLE_X, 0, BUFFER_WIDTH - 1, MIDDLE_Y),
+            Active::BottomLeft => (0, MIDDLE_Y, MIDDLE_X, BUFFER_HEIGHT - 1),
+            Active::BottomRight => (MIDDLE_X, MIDDLE_Y, BUFFER_WIDTH - 1, BUFFER_HEIGHT - 1),
+        };
+
+        let color = ColorCode::new(
+            if active {
+                Color::LightGreen
+            } else {
+                Color::LightGray
+            },
+            Color::DarkGray,
+        );
+
+        for col in x1..=x2 {
+            plot(0xC4 as char, col, y1, color);
+            plot(0xC4 as char, col, y2, color);
+        }
+        for row in y1..=y2 {
+            plot(0xB3 as char, x1, row, color);
+            plot(0xB3 as char, x2, row, color);
+        }
+
+        self.draw_label(active);
+
+        match self {
+            Active::TopLeft => {
+                plot(0xDA as char, 0, 0, color);
+                plot(0xC3 as char, 0, MIDDLE_Y, color);
+                plot(0xC2 as char, MIDDLE_X, 0, color);
+                plot(0xC5 as char, MIDDLE_X, MIDDLE_Y, color);
+
+                // here we must redraw because we overwrote this
+                Active::BottomLeft.draw_label(false);
+            }
+            Active::TopRight => {
+                plot(0xC2 as char, MIDDLE_X, 0, color);
+                plot(0xC5 as char, MIDDLE_X, MIDDLE_Y, color);
+                plot(0xBF as char, BUFFER_WIDTH - 1, 0, color);
+                plot(0xB4 as char, BUFFER_WIDTH - 1, MIDDLE_Y, color);
+
+                // here we must redraw because we overwrote this
+                Active::BottomRight.draw_label(false);
+            }
+            Active::BottomLeft => {
+                plot(0xC3 as char, 0, MIDDLE_Y, color);
+                plot(0xC0 as char, 0, BUFFER_HEIGHT - 1, color);
+                plot(0xC5 as char, MIDDLE_X, MIDDLE_Y, color);
+                plot(0xC1 as char, MIDDLE_X, BUFFER_HEIGHT - 1, color);
+            }
+            Active::BottomRight => {
+                plot(0xC5 as char, MIDDLE_X, MIDDLE_Y, color);
+                plot(0xC1 as char, MIDDLE_X, BUFFER_HEIGHT - 1, color);
+                plot(0xB4 as char, BUFFER_WIDTH - 1, MIDDLE_Y, color);
+                plot(0xD9 as char, BUFFER_WIDTH - 1, BUFFER_HEIGHT - 1, color);
+            }
+        }
+    }
+}
+
+// #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct SwimInterface {
-    letters: [char; BUFFER_WIDTH],
-    num_letters: usize,
-    next_letter: usize,
-    col: usize,
-    row: usize,
-}
-
-pub fn safe_add<const LIMIT: usize>(a: usize, b: usize) -> usize {
-    (a + b).mod_floor(&LIMIT)
-}
-
-pub fn add1<const LIMIT: usize>(value: usize) -> usize {
-    safe_add::<LIMIT>(value, 1)
-}
-
-pub fn sub1<const LIMIT: usize>(value: usize) -> usize {
-    safe_add::<LIMIT>(value, LIMIT - 1)
+    active: Active,
+    text_editors: [TextEditor; 4],
 }
 
 impl Default for SwimInterface {
     fn default() -> Self {
+        let windows = [
+            Window::new(1, 1, WIDTH_LEFT, HEIGHT_UP),
+            Window::new(1 + 1 + WIDTH_LEFT, 1, WIDTH_RIGHT, HEIGHT_UP),
+            Window::new(1, 1 + 1 + HEIGHT_UP, WIDTH_LEFT, HEIGHT_DOWN),
+            Window::new(
+                1 + 1 + WIDTH_LEFT,
+                1 + 1 + HEIGHT_UP,
+                WIDTH_RIGHT,
+                HEIGHT_DOWN,
+            ),
+        ];
+
         Self {
-            letters: ['A'; BUFFER_WIDTH],
-            num_letters: 1,
-            next_letter: 1,
-            col: BUFFER_WIDTH / 2,
-            row: BUFFER_HEIGHT / 2,
+            active: Active::TopLeft,
+            text_editors: windows.map(TextEditor::new),
         }
     }
 }
 
 impl SwimInterface {
-    fn letter_columns(&self) -> impl Iterator<Item = usize> + '_ {
-        (0..self.num_letters).map(|n| safe_add::<BUFFER_WIDTH>(n, self.col))
-    }
+    pub fn init(&self) {
+        [
+            Active::TopLeft,
+            Active::TopRight,
+            Active::BottomLeft,
+            Active::BottomRight,
+        ]
+        .map(|x| x.draw(false));
 
+        self.active.draw(true);
+    }
     pub fn tick(&mut self) {
         self.clear_current();
         self.draw_current();
     }
 
     fn clear_current(&self) {
-        for x in self.letter_columns() {
-            plot(' ', x, self.row, ColorCode::new(Color::Black, Color::Black));
-        }
+        // clear_screen();
     }
 
+    // fn draw_border(&self) {
+    //     let color = ColorCode::new(Color::DarkGray, Color::LightRed);
+    //     for col in 0..BUFFER_WIDTH {
+    //         plot(0xC4 as char, col, 0, color);
+    //         plot(0xC4 as char, col, MIDDLE_Y, color);
+    //         plot(0xC4 as char, col, BUFFER_HEIGHT - 1, color);
+    //     }
+    //     for row in 0..BUFFER_HEIGHT {
+    //         plot(0xB3 as char, 0, row, color);
+    //         plot(0xB3 as char, MIDDLE_X, row, color);
+    //         plot(0xB3 as char, BUFFER_WIDTH - 1, row, color);
+    //     }
+    // }
+
     fn draw_current(&self) {
-        for (i, x) in self.letter_columns().enumerate() {
-            plot(
-                self.letters[i],
-                x,
-                self.row,
-                ColorCode::new(Color::Cyan, Color::Black),
-            );
+        for t in &self.text_editors {
+            t.draw();
+            t.window.dbgdraw()
         }
     }
 
@@ -81,17 +216,25 @@ impl SwimInterface {
         }
     }
 
+    fn switch_active(&mut self, new: Active) {
+        self.active.draw(false);
+        self.active = new;
+        self.active.draw(true);
+    }
+
     fn handle_raw(&mut self, key: KeyCode) {
         match key {
+            KeyCode::F1 => self.switch_active(Active::TopLeft),
+            KeyCode::F2 => self.switch_active(Active::TopRight),
+            KeyCode::F3 => self.switch_active(Active::BottomLeft),
+            KeyCode::F4 => self.switch_active(Active::BottomRight),
             _ => {}
         }
     }
 
     fn handle_unicode(&mut self, key: char) {
         if is_drawable(key) {
-            self.letters[self.next_letter] = key;
-            self.next_letter = add1::<BUFFER_WIDTH>(self.next_letter);
-            self.num_letters = min(self.num_letters + 1, BUFFER_WIDTH);
+            self.text_editors[self.active as usize].putc(key);
         }
     }
 }
