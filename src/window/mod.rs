@@ -1,7 +1,4 @@
-use pluggable_interrupt_os::{
-    println,
-    vga_buffer::{plot, Color, ColorCode, BUFFER_WIDTH},
-};
+use pluggable_interrupt_os::vga_buffer::{plot, Color, ColorCode};
 
 pub struct Window {
     pub x1: u8,
@@ -28,13 +25,13 @@ impl Window {
         (self.x2 - self.x1 + 1) as usize
     }
 
-    pub fn dbgdraw(&self) {
-        let dbgcolor = ColorCode::new(Color::Black, Color::LightGreen);
-        plot('#', self.x1 as usize, self.y1 as usize, dbgcolor);
-        plot('#', self.x1 as usize, self.y2 as usize, dbgcolor);
-        plot('#', self.x2 as usize, self.y1 as usize, dbgcolor);
-        plot('#', self.x2 as usize, self.y2 as usize, dbgcolor);
-    }
+    // pub fn dbgdraw(&self) {
+    //     let dbgcolor = ColorCode::new(Color::Black, Color::LightGreen);
+    //     plot('#', self.x1 as usize, self.y1 as usize, dbgcolor);
+    //     plot('#', self.x1 as usize, self.y2 as usize, dbgcolor);
+    //     plot('#', self.x2 as usize, self.y1 as usize, dbgcolor);
+    //     plot('#', self.x2 as usize, self.y2 as usize, dbgcolor);
+    // }
 
     fn plot(&self, c: char, col: u8, row: u8, color: ColorCode) {
         let col = col + self.x1;
@@ -45,7 +42,9 @@ impl Window {
     }
 }
 
-const WINDOW_ROWS: usize = 10;
+// Overestimate, so we have plenty of room for lines when we multiply this by 4.
+// Window::height should be used to get the actuall number of rows
+const MAX_WINDOW_ROWS: usize = 16;
 
 #[derive(Clone, Copy)]
 struct Line {
@@ -67,11 +66,12 @@ struct Cursor {
     col: usize,
 }
 
-const DOC_LINES: usize = WINDOW_ROWS * 4;
+const DOC_LINES: usize = MAX_WINDOW_ROWS * 4;
+// Uncomment to test for out of bounds errors at the end of the document:
 // const DOC_LINES: usize = 5;
 
 pub struct TextEditor {
-    doc: [Line; DOC_LINES],
+    lines: [Line; DOC_LINES],
     cursor: Cursor,
     scroll: usize,
     pub window: Window,
@@ -80,34 +80,33 @@ pub struct TextEditor {
 impl TextEditor {
     pub fn new(window: Window) -> Self {
         Self {
-            doc: [Line::default(); DOC_LINES],
+            lines: [Line::default(); DOC_LINES],
             cursor: Cursor { line: 0, col: 0 },
             scroll: 0,
             window,
         }
     }
     fn sanity(&mut self) {
-        if self.cursor.col > self.doc[self.cursor.line].len {
-            self.cursor.col = self.doc[self.cursor.line].len
+        if self.cursor.col > self.lines[self.cursor.line].len {
+            self.cursor.col = self.lines[self.cursor.line].len
         }
     }
 
     pub fn insert_char(&mut self, c: char) {
         self.sanity();
 
-        // let r = &mut self.doc[self.cursor.line].data[0..self.doc[self.cursor.line].len];
-        if self.doc[self.cursor.line].len >= 255 {
+        if self.lines[self.cursor.line].len >= 255 {
             return;
         }
-        if self.doc[self.cursor.line].len != self.cursor.col {
-            let end = self.doc[self.cursor.line].len;
+        if self.lines[self.cursor.line].len != self.cursor.col {
+            let end = self.lines[self.cursor.line].len;
             let start = self.cursor.col + 1;
             for i in (start..=end).rev() {
-                self.doc[self.cursor.line].data[i] = self.doc[self.cursor.line].data[i - 1];
+                self.lines[self.cursor.line].data[i] = self.lines[self.cursor.line].data[i - 1];
             }
         }
-        self.doc[self.cursor.line].len += 1;
-        self.doc[self.cursor.line].data[self.cursor.col] = c;
+        self.lines[self.cursor.line].len += 1;
+        self.lines[self.cursor.line].data[self.cursor.col] = c;
         self.cursor.col += 1;
     }
 
@@ -119,17 +118,17 @@ impl TextEditor {
         let end = DOC_LINES - 1;
         let start = self.cursor.line;
         for i in (start + 2..=end).rev() {
-            self.doc[i] = self.doc[i - 1];
+            self.lines[i] = self.lines[i - 1];
         }
 
-        self.doc[self.cursor.line + 1] = Default::default();
-        for i in self.cursor.col..self.doc[self.cursor.line].len {
-            self.doc[self.cursor.line + 1].data[i - self.cursor.col] =
-                self.doc[self.cursor.line].data[i];
-            self.doc[self.cursor.line + 1].len += 1;
+        self.lines[self.cursor.line + 1] = Default::default();
+        for i in self.cursor.col..self.lines[self.cursor.line].len {
+            self.lines[self.cursor.line + 1].data[i - self.cursor.col] =
+                self.lines[self.cursor.line].data[i];
+            self.lines[self.cursor.line + 1].len += 1;
 
-            self.doc[self.cursor.line].data[i] = ' ';
-            self.doc[self.cursor.line].len -= 1;
+            self.lines[self.cursor.line].data[i] = ' ';
+            self.lines[self.cursor.line].len -= 1;
         }
 
         self.cursor.line += 1;
@@ -147,28 +146,28 @@ impl TextEditor {
                 return;
             } else {
                 self.cursor.line -= 1;
-                self.cursor.col = self.doc[self.cursor.line].len;
+                self.cursor.col = self.lines[self.cursor.line].len;
 
                 if self.cursor.line < DOC_LINES - 1 {
-                    for i in 0..self.doc[self.cursor.line + 1].len {
-                        self.doc[self.cursor.line].data[self.doc[self.cursor.line].len] =
-                            self.doc[self.cursor.line + 1].data[i];
-                        self.doc[self.cursor.line].len += 1
+                    for i in 0..self.lines[self.cursor.line + 1].len {
+                        self.lines[self.cursor.line].data[self.lines[self.cursor.line].len] =
+                            self.lines[self.cursor.line + 1].data[i];
+                        self.lines[self.cursor.line].len += 1
                     }
                 }
 
                 for i in self.cursor.line + 1..DOC_LINES - 1 {
-                    self.doc[i] = self.doc[i + 1];
+                    self.lines[i] = self.lines[i + 1];
                 }
-                self.doc[DOC_LINES - 1] = Default::default();
+                self.lines[DOC_LINES - 1] = Default::default();
             }
         } else {
             self.cursor.col -= 1;
-            for i in self.cursor.col..self.doc[self.cursor.line].len - 1 {
-                self.doc[self.cursor.line].data[i] = self.doc[self.cursor.line].data[i + 1]
+            for i in self.cursor.col..self.lines[self.cursor.line].len - 1 {
+                self.lines[self.cursor.line].data[i] = self.lines[self.cursor.line].data[i + 1]
             }
-            self.doc[self.cursor.line].data[self.doc[self.cursor.line].len - 1] = ' ';
-            self.doc[self.cursor.line].len -= 1;
+            self.lines[self.cursor.line].data[self.lines[self.cursor.line].len - 1] = ' ';
+            self.lines[self.cursor.line].len -= 1;
         }
     }
 
@@ -178,7 +177,7 @@ impl TextEditor {
             let rows_needed = if line == self.cursor.line {
                 self.cursor.col / self.window.width() + 1
             } else {
-                self.doc[line].len / self.window.width() + 1
+                self.lines[line].len / self.window.width() + 1
             };
 
             total += rows_needed;
@@ -195,14 +194,14 @@ impl TextEditor {
         let gray = ColorCode::new(Color::LightGray, Color::Black);
         let gray_inv = ColorCode::new(Color::Black, Color::LightGray);
 
-        let rows_needed = self.doc[line].len / self.window.width() + 1;
+        let rows_needed = self.lines[line].len / self.window.width() + 1;
         let len = rows_needed * self.window.width();
 
         for i in 0..len {
             let y = i / self.window.width() + y_base;
             let x = i % self.window.width();
 
-            let c = *self.doc[line].data.get(i as usize).unwrap_or(&' ');
+            let c = *self.lines[line].data.get(i as usize).unwrap_or(&' ');
 
             if y >= self.window.height() {
                 break;
@@ -251,7 +250,7 @@ impl TextEditor {
                 return;
             } else {
                 self.cursor.line -= 1;
-                self.cursor.col = self.doc[self.cursor.line].len
+                self.cursor.col = self.lines[self.cursor.line].len
             }
         } else {
             self.cursor.col -= 1
@@ -259,7 +258,7 @@ impl TextEditor {
     }
 
     pub fn arrow_right(&mut self) {
-        if self.cursor.col == self.doc[self.cursor.line].len {
+        if self.cursor.col == self.lines[self.cursor.line].len {
             if self.cursor.line == DOC_LINES - 1 {
                 return;
             } else {
@@ -276,7 +275,7 @@ impl TextEditor {
             return;
         } else {
             self.cursor.line -= 1;
-            self.cursor.col = usize::min(self.cursor.col, self.doc[self.cursor.line].len)
+            self.cursor.col = usize::min(self.cursor.col, self.lines[self.cursor.line].len)
         }
     }
 
@@ -285,7 +284,7 @@ impl TextEditor {
             return;
         } else {
             self.cursor.line += 1;
-            self.cursor.col = usize::min(self.cursor.col, self.doc[self.cursor.line].len)
+            self.cursor.col = usize::min(self.cursor.col, self.lines[self.cursor.line].len)
         }
     }
 }
