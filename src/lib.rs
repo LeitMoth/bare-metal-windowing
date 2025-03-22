@@ -233,11 +233,15 @@ impl SwimInterface {
     }
 
     fn handle_unicode(&mut self, key: char) {
-        if key == '\n' {
-            self.text_editors[self.active as usize].newline();
-        }
-        if is_drawable(key) {
-            self.text_editors[self.active as usize].putc(key);
+        const ASCII_ENTER: char = '\n';
+        const ASCII_DEL: char = '\x7F';
+        const ASCII_BS: char = '\x08';
+
+        match key {
+            ASCII_ENTER => self.text_editors[self.active as usize].newline(),
+            ASCII_BS | ASCII_DEL => self.text_editors[self.active as usize].backspace(),
+            k if is_drawable(k) => self.text_editors[self.active as usize].putc(key),
+            _ => {}
         }
     }
 }

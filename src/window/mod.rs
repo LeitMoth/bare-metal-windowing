@@ -113,12 +113,40 @@ impl TextEditor {
         }
     }
 
+    pub fn backspace(&mut self) {
+        if self.cursor.col == 0 {
+            if self.cursor.line == 0 {
+                return;
+            }
+            self.cursor.line -= 1;
+            self.cursor.col = self.doc[self.cursor.line].len
+        } else {
+            self.cursor.col -= 1
+        }
+    }
+
+    // take x,y in buffer, find data line, col
+    fn reverse_lookup(&self, x: usize, y: usize) -> (usize, usize) {
+        return (y, x);
+    }
+
     pub fn draw(&self) {
         let gray = ColorCode::new(Color::LightGray, Color::Black);
-        for row in 0..self.window.height() {
-            for col in 0..self.window.width() {
-                self.window
-                    .plot(self.doc[row].data[col], col as u8, row as u8, gray);
+        let gray_inv = ColorCode::new(Color::Black, Color::LightGray);
+        for y in 0..self.window.height() {
+            for x in 0..self.window.width() {
+                let (line, col) = self.reverse_lookup(x, y);
+                if line == self.cursor.line && col == self.cursor.col {}
+                self.window.plot(
+                    self.doc[line].data[col],
+                    x as u8,
+                    y as u8,
+                    if line == self.cursor.line && col == self.cursor.col {
+                        gray_inv
+                    } else {
+                        gray
+                    },
+                );
             }
         }
     }
