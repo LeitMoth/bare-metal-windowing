@@ -10,13 +10,27 @@ use window::{TextEditor, Window};
 
 use core::prelude::rust_2024::derive;
 
-const WIDTH_LEFT: usize = (BUFFER_WIDTH - 3) / 2;
-const WIDTH_RIGHT: usize = (BUFFER_WIDTH - 3) - WIDTH_LEFT;
-const HEIGHT_UP: usize = (BUFFER_HEIGHT - 3) / 2;
-const HEIGHT_DOWN: usize = (BUFFER_HEIGHT - 3) - HEIGHT_UP;
+const TASK_MANAGER_WIDTH: usize = 10;
+const WIN_REGION_WIDTH: usize = BUFFER_WIDTH - TASK_MANAGER_WIDTH;
+const MAX_OPEN: usize = 16;
+const BLOCK_SIZE: usize = 256;
+const NUM_BLOCKS: usize = 255;
+const MAX_FILE_BLOCKS: usize = 64;
+const MAX_FILE_BYTES: usize = MAX_FILE_BLOCKS * BLOCK_SIZE;
+const MAX_FILES_STORED: usize = 30;
+const MAX_FILENAME_BYTES: usize = 10;
+
+const WIN_WIDTH: usize = (WIN_REGION_WIDTH - 3) / 2;
+
+// const WIDTH_LEFT: usize = (BUFFER_WIDTH - 3) / 2;
+// const WIDTH_RIGHT: usize = (BUFFER_WIDTH - 3) - WIDTH_LEFT;
+const WIDTH_LEFT: usize = WIN_WIDTH;
+const WIDTH_RIGHT: usize = WIN_WIDTH;
+const HEIGHT_UP: usize = (BUFFER_HEIGHT - 4) / 2;
+const HEIGHT_DOWN: usize = (BUFFER_HEIGHT - 4) - HEIGHT_UP;
 
 const MIDDLE_X: usize = 1 + WIDTH_LEFT;
-const MIDDLE_Y: usize = 1 + HEIGHT_UP;
+const MIDDLE_Y: usize = 1 + 1 + HEIGHT_UP;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Active {
@@ -42,10 +56,10 @@ impl Active {
         };
         match self {
             Active::TopLeft => {
-                plot2(MIDDLE_X / 2, 0, 'F', '1');
+                plot2(MIDDLE_X / 2, 1, 'F', '1');
             }
             Active::TopRight => {
-                plot2(MIDDLE_X * 3 / 2, 0, 'F', '2');
+                plot2(MIDDLE_X * 3 / 2, 1, 'F', '2');
             }
             Active::BottomLeft => {
                 plot2(MIDDLE_X / 2, MIDDLE_Y, 'F', '3');
@@ -58,10 +72,10 @@ impl Active {
 
     fn draw(&self, active: bool) {
         let (x1, y1, x2, y2) = match self {
-            Active::TopLeft => (0, 0, MIDDLE_X, MIDDLE_Y),
-            Active::TopRight => (MIDDLE_X, 0, BUFFER_WIDTH - 1, MIDDLE_Y),
+            Active::TopLeft => (0, 1, MIDDLE_X, MIDDLE_Y),
+            Active::TopRight => (MIDDLE_X, 1, WIN_REGION_WIDTH - 2, MIDDLE_Y),
             Active::BottomLeft => (0, MIDDLE_Y, MIDDLE_X, BUFFER_HEIGHT - 1),
-            Active::BottomRight => (MIDDLE_X, MIDDLE_Y, BUFFER_WIDTH - 1, BUFFER_HEIGHT - 1),
+            Active::BottomRight => (MIDDLE_X, MIDDLE_Y, WIN_REGION_WIDTH - 2, BUFFER_HEIGHT - 1),
         };
 
         let color = ColorCode::new(
@@ -86,19 +100,19 @@ impl Active {
 
         match self {
             Active::TopLeft => {
-                plot(0xDA as char, 0, 0, color);
+                plot(0xDA as char, 0, 1, color);
                 plot(0xC3 as char, 0, MIDDLE_Y, color);
-                plot(0xC2 as char, MIDDLE_X, 0, color);
+                plot(0xC2 as char, MIDDLE_X, 1, color);
                 plot(0xC5 as char, MIDDLE_X, MIDDLE_Y, color);
 
                 // here we must redraw because we overwrote this
                 Active::BottomLeft.draw_label(false);
             }
             Active::TopRight => {
-                plot(0xC2 as char, MIDDLE_X, 0, color);
+                plot(0xC2 as char, MIDDLE_X, 1, color);
                 plot(0xC5 as char, MIDDLE_X, MIDDLE_Y, color);
-                plot(0xBF as char, BUFFER_WIDTH - 1, 0, color);
-                plot(0xB4 as char, BUFFER_WIDTH - 1, MIDDLE_Y, color);
+                plot(0xBF as char, WIN_REGION_WIDTH - 2, 1, color);
+                plot(0xB4 as char, WIN_REGION_WIDTH - 2, MIDDLE_Y, color);
 
                 // here we must redraw because we overwrote this
                 Active::BottomRight.draw_label(false);
@@ -112,8 +126,8 @@ impl Active {
             Active::BottomRight => {
                 plot(0xC5 as char, MIDDLE_X, MIDDLE_Y, color);
                 plot(0xC1 as char, MIDDLE_X, BUFFER_HEIGHT - 1, color);
-                plot(0xB4 as char, BUFFER_WIDTH - 1, MIDDLE_Y, color);
-                plot(0xD9 as char, BUFFER_WIDTH - 1, BUFFER_HEIGHT - 1, color);
+                plot(0xB4 as char, WIN_REGION_WIDTH - 2, MIDDLE_Y, color);
+                plot(0xD9 as char, WIN_REGION_WIDTH - 2, BUFFER_HEIGHT - 1, color);
             }
         }
     }
@@ -128,12 +142,12 @@ pub struct SwimInterface {
 impl Default for SwimInterface {
     fn default() -> Self {
         let windows = [
-            Window::new(1, 1, WIDTH_LEFT, HEIGHT_UP),
-            Window::new(1 + 1 + WIDTH_LEFT, 1, WIDTH_RIGHT, HEIGHT_UP),
-            Window::new(1, 1 + 1 + HEIGHT_UP, WIDTH_LEFT, HEIGHT_DOWN),
+            Window::new(1, 2, WIDTH_LEFT, HEIGHT_UP),
+            Window::new(1 + 1 + WIDTH_LEFT, 2, WIDTH_RIGHT, HEIGHT_UP),
+            Window::new(1, 2 + 1 + HEIGHT_UP, WIDTH_LEFT, HEIGHT_DOWN),
             Window::new(
                 1 + 1 + WIDTH_LEFT,
-                1 + 1 + HEIGHT_UP,
+                2 + 1 + HEIGHT_UP,
                 WIDTH_RIGHT,
                 HEIGHT_DOWN,
             ),
