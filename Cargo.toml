@@ -10,6 +10,16 @@ edition = "2021"
 bootloader = "0.9.30"
 pc-keyboard = "0.8.0"
 pluggable_interrupt_os = "0.5.3"
+# compiler_builtins = { version = "0.1", features = ["mem"] }
+simple_interp = {git = "https://github.com/gjf2a/simple_interp"}
+gc_headers = {git = "https://github.com/gjf2a/gc_headers" }
+ramdisk = {git = "https://github.com/gjf2a/ramdisk"}
+# Link to the GitHub repository for your garbage collector. Use the format below, but substitute your own repository name and URL:
+#     gc_heap = {git = "https://github.com/gjf2a/gc_heap" }
+gc_heap = {git = "ssh://git@github.com/LeitMoth/hdx_csci320_gc_heap.git" }
+# Link to the GitHub repository for your file system. Again, use the format below, but substitute your own repository name and URL:
+#     file_system_solution = {git = "https://github.com/gjf2a/file_system_solution" }
+file_system_solution = {git = "ssh://git@github.com/LeitMoth/hdx_csci320_file_system.git" }
 
 [dependencies.num]
 version = "0.4.0"
