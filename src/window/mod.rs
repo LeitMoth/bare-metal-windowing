@@ -80,7 +80,7 @@ impl App {
     pub fn arrow_left(&mut self) {
         match self {
             App::TextEditor(text_editor) => text_editor.arrow_left(),
-            App::Explorer(explorer) => todo!(),
+            App::Explorer(explorer) => explorer.arrow_left(),
             App::RunningScript(running_script) => todo!(),
         }
     }
@@ -88,7 +88,7 @@ impl App {
     pub fn arrow_right(&mut self) {
         match self {
             App::TextEditor(text_editor) => text_editor.arrow_right(),
-            App::Explorer(explorer) => todo!(),
+            App::Explorer(explorer) => explorer.arrow_right(),
             App::RunningScript(running_script) => todo!(),
         }
     }
@@ -96,7 +96,7 @@ impl App {
     pub fn arrow_up(&mut self) {
         match self {
             App::TextEditor(text_editor) => text_editor.arrow_up(),
-            App::Explorer(explorer) => todo!(),
+            App::Explorer(explorer) => explorer.arrow_up(),
             App::RunningScript(running_script) => todo!(),
         }
     }
@@ -104,7 +104,7 @@ impl App {
     pub fn arrow_down(&mut self) {
         match self {
             App::TextEditor(text_editor) => text_editor.arrow_down(),
-            App::Explorer(explorer) => todo!(),
+            App::Explorer(explorer) => explorer.arrow_down(),
             App::RunningScript(running_script) => todo!(),
         }
     }
@@ -143,6 +143,7 @@ impl App {
 }
 
 pub struct Explorer {
+    selected: usize,
     num_files: usize,
     names: [[u8; MAX_FILENAME_BYTES]; 3 * 10], // 3 cols, 10 rows
     window: Window,
@@ -152,6 +153,7 @@ impl Explorer {
     pub fn new(window: Window, fs: &mut FsType) -> Self {
         let (num_files, names) = fs.list_directory().unwrap();
         Explorer {
+            selected: 0,
             num_files,
             names,
             window,
@@ -172,21 +174,52 @@ impl Explorer {
         for row in 0..10 {
             for col in 0..3 {
                 for ci in 0..MAX_FILENAME_BYTES {
+                    let idx = row * 3 + col;
+                    let color = if idx == self.selected {
+                        ColorCode::new(Color::Black, Color::LightGray)
+                    } else {
+                        ColorCode::new(Color::LightGray, Color::Black)
+                    };
+
                     self.window.plot(
-                        self.names[row * 3 + col][ci] as char,
+                        self.names[idx][ci] as char,
                         (col * MAX_FILENAME_BYTES + ci) as u8,
                         row as u8,
-                        ColorCode::new(Color::LightGray, Color::Black),
+                        color,
                     );
                 }
             }
         }
-        // self.window.plot(
-        //     self.names[row * 3 + col][ci] as char,
-        //     col as u8,
-        //     row as u8,
-        //     ColorCode::new(Color::LightGray, Color::Black),
-        // );
+    }
+
+    fn arrow_left(&mut self) {
+        self.selected = match self.selected % 3 {
+            1..3 => self.selected - 1,
+            _ => self.selected,
+        }
+    }
+
+    fn arrow_right(&mut self) {
+        self.selected = match self.selected % 3 {
+            0..2 => self.selected + 1,
+            _ => self.selected,
+        };
+        if self.selected >= self.num_files {
+            self.selected = self.num_files - 1;
+        }
+    }
+
+    fn arrow_up(&mut self) {
+        if self.selected >= 3 {
+            self.selected -= 3;
+        }
+    }
+
+    fn arrow_down(&mut self) {
+        self.selected += 3;
+        if self.selected >= self.num_files {
+            self.selected = self.num_files - 1;
+        }
     }
 }
 
