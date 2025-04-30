@@ -69,10 +69,6 @@ impl Active {
             },
             Color::DarkGray,
         );
-        let plot2 = |x, y, c1, c2| {
-            plot(c1, x, y, color);
-            plot(c2, x + 1, y, color);
-        };
         match self {
             Active::TopLeft => {
                 plots(
@@ -300,10 +296,10 @@ impl Default for SwimInterface {
         }
 
         let apps = [
-            App::TextEditor(TextEditor::new(w_top_left)),
+            App::Explorer(Explorer::new(w_top_left, &mut file_system)),
             App::Explorer(Explorer::new(w_top_right, &mut file_system)),
-            App::TextEditor(TextEditor::new(w_bottom_left)),
-            App::TextEditor(TextEditor::new(w_bottom_right)),
+            App::Explorer(Explorer::new(w_bottom_left, &mut file_system)),
+            App::Explorer(Explorer::new(w_bottom_right, &mut file_system)),
         ];
 
         let task_manager = TaskManager;
