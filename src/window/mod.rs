@@ -1,4 +1,3 @@
-use file_system_solution::FileSystem;
 use pluggable_interrupt_os::vga_buffer::{plot, Color, ColorCode};
 
 use crate::{FsType, MAX_FILENAME_BYTES};
@@ -112,7 +111,7 @@ impl App {
     pub fn newline(&mut self) {
         match self {
             App::TextEditor(text_editor) => text_editor.newline(),
-            App::Explorer(explorer) => todo!(),
+            App::Explorer(explorer) => {}
             App::RunningScript(running_script) => todo!(),
         }
     }
@@ -120,7 +119,7 @@ impl App {
     pub fn backspace(&mut self) {
         match self {
             App::TextEditor(text_editor) => text_editor.backspace(),
-            App::Explorer(explorer) => todo!(),
+            App::Explorer(explorer) => {}
             App::RunningScript(running_script) => todo!(),
         }
     }
@@ -128,7 +127,7 @@ impl App {
     pub fn insert_char(&mut self, c: char) {
         match self {
             App::TextEditor(text_editor) => text_editor.insert_char(c),
-            App::Explorer(explorer) => todo!(),
+            App::Explorer(explorer) => {} // TODO(colin): implement editing and running!!!
             App::RunningScript(running_script) => todo!(),
         }
     }
