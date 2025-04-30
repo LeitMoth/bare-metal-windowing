@@ -8,7 +8,7 @@ use pluggable_interrupt_os::vga_buffer::{
     is_drawable, plot, Color, ColorCode, BUFFER_HEIGHT, BUFFER_WIDTH,
 };
 use ramdisk::RamDisk;
-use window::{TextEditor, Window};
+use window::{App, TextEditor, Window};
 
 use core::prelude::rust_2024::derive;
 
@@ -147,7 +147,7 @@ pub struct SwimInterface {
         MAX_FILENAME_BYTES,
     >,
     active: Active,
-    text_editors: [TextEditor; 4],
+    apps: [App; 4],
 }
 
 impl Default for SwimInterface {
@@ -235,16 +235,16 @@ impl Default for SwimInterface {
             file_system.close(fd_pi).unwrap();
         }
 
-        let text_editors = [
-            TextEditor::new(w_top_left),
-            TextEditor::new(w_top_right),
-            TextEditor::new(w_bottom_left),
-            TextEditor::new(w_bottom_right),
+        let apps = [
+            App::TextEditor(TextEditor::new(w_top_left)),
+            App::TextEditor(TextEditor::new(w_top_right)),
+            App::TextEditor(TextEditor::new(w_bottom_left)),
+            App::TextEditor(TextEditor::new(w_bottom_right)),
         ];
         Self {
             file_system,
             active: Active::TopLeft,
-            text_editors,
+            apps,
         }
     }
 }
@@ -289,7 +289,7 @@ impl SwimInterface {
     // }
 
     fn draw_current(&mut self) {
-        for t in &mut self.text_editors {
+        for t in &mut self.apps {
             t.draw();
             // t.window.dbgdraw()
         }
@@ -314,10 +314,10 @@ impl SwimInterface {
             KeyCode::F2 => self.switch_active(Active::TopRight),
             KeyCode::F3 => self.switch_active(Active::BottomLeft),
             KeyCode::F4 => self.switch_active(Active::BottomRight),
-            KeyCode::ArrowLeft => self.text_editors[self.active as usize].arrow_left(),
-            KeyCode::ArrowRight => self.text_editors[self.active as usize].arrow_right(),
-            KeyCode::ArrowUp => self.text_editors[self.active as usize].arrow_up(),
-            KeyCode::ArrowDown => self.text_editors[self.active as usize].arrow_down(),
+            KeyCode::ArrowLeft => self.apps[self.active as usize].arrow_left(),
+            KeyCode::ArrowRight => self.apps[self.active as usize].arrow_right(),
+            KeyCode::ArrowUp => self.apps[self.active as usize].arrow_up(),
+            KeyCode::ArrowDown => self.apps[self.active as usize].arrow_down(),
             _ => {}
         }
     }
@@ -328,9 +328,9 @@ impl SwimInterface {
         const ASCII_BS: char = '\x08';
 
         match key {
-            ASCII_ENTER => self.text_editors[self.active as usize].newline(),
-            ASCII_BS | ASCII_DEL => self.text_editors[self.active as usize].backspace(),
-            k if is_drawable(k) => self.text_editors[self.active as usize].insert_char(key),
+            ASCII_ENTER => self.apps[self.active as usize].newline(),
+            ASCII_BS | ASCII_DEL => self.apps[self.active as usize].backspace(),
+            k if is_drawable(k) => self.apps[self.active as usize].insert_char(key),
             _ => {}
         }
     }
