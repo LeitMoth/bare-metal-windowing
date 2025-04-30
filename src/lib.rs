@@ -8,7 +8,7 @@ use pluggable_interrupt_os::vga_buffer::{
     is_drawable, plot, Color, ColorCode, BUFFER_HEIGHT, BUFFER_WIDTH,
 };
 use ramdisk::RamDisk;
-use window::{App, TextEditor, Window};
+use window::{App, Explorer, TextEditor, Window};
 
 use core::prelude::rust_2024::derive;
 
@@ -21,6 +21,16 @@ const MAX_FILE_BLOCKS: usize = 64;
 const MAX_FILE_BYTES: usize = MAX_FILE_BLOCKS * BLOCK_SIZE;
 const MAX_FILES_STORED: usize = 30;
 const MAX_FILENAME_BYTES: usize = 10;
+
+type FsType = FileSystem<
+    MAX_OPEN,
+    BLOCK_SIZE,
+    NUM_BLOCKS,
+    MAX_FILE_BLOCKS,
+    MAX_FILE_BYTES,
+    MAX_FILES_STORED,
+    MAX_FILENAME_BYTES,
+>;
 
 const WIN_WIDTH: usize = (WIN_REGION_WIDTH - 3) / 2;
 
@@ -137,15 +147,7 @@ impl Active {
 
 // #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct SwimInterface {
-    file_system: FileSystem<
-        MAX_OPEN,
-        BLOCK_SIZE,
-        NUM_BLOCKS,
-        MAX_FILE_BLOCKS,
-        MAX_FILE_BYTES,
-        MAX_FILES_STORED,
-        MAX_FILENAME_BYTES,
-    >,
+    file_system: FsType,
     active: Active,
     apps: [App; 4],
 }
@@ -237,7 +239,7 @@ impl Default for SwimInterface {
 
         let apps = [
             App::TextEditor(TextEditor::new(w_top_left)),
-            App::TextEditor(TextEditor::new(w_top_right)),
+            App::Explorer(Explorer::new(w_top_right, &mut file_system)),
             App::TextEditor(TextEditor::new(w_bottom_left)),
             App::TextEditor(TextEditor::new(w_bottom_right)),
         ];

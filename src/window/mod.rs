@@ -1,5 +1,9 @@
+use file_system_solution::FileSystem;
 use pluggable_interrupt_os::vga_buffer::{plot, Color, ColorCode};
 
+use crate::{FsType, MAX_FILENAME_BYTES};
+
+#[derive(Clone)]
 pub struct Window {
     pub x1: u8,
     pub y1: u8,
@@ -132,13 +136,59 @@ impl App {
     pub fn draw(&mut self) {
         match self {
             App::TextEditor(text_editor) => text_editor.draw(),
-            App::Explorer(explorer) => todo!(),
+            App::Explorer(explorer) => explorer.draw(),
             App::RunningScript(running_script) => todo!(),
         }
     }
 }
 
-struct Explorer;
+pub struct Explorer {
+    num_files: usize,
+    names: [[u8; MAX_FILENAME_BYTES]; 3 * 10], // 3 cols, 10 rows
+    window: Window,
+}
+
+impl Explorer {
+    pub fn new(window: Window, fs: &mut FsType) -> Self {
+        let (num_files, names) = fs.list_directory().unwrap();
+        Explorer {
+            num_files,
+            names,
+            window,
+        }
+    }
+
+    fn name_as_slice(&self, i: usize) -> &[u8] {
+        let mut end = MAX_FILENAME_BYTES;
+        for j in 0..MAX_FILENAME_BYTES {
+            if self.names[i][j] == 0 {
+                end = j
+            }
+        }
+        &self.names[i][0..end]
+    }
+
+    fn draw(&self) {
+        for row in 0..10 {
+            for col in 0..3 {
+                for ci in 0..MAX_FILENAME_BYTES {
+                    self.window.plot(
+                        self.names[row * 3 + col][ci] as char,
+                        (col * MAX_FILENAME_BYTES + ci) as u8,
+                        row as u8,
+                        ColorCode::new(Color::LightGray, Color::Black),
+                    );
+                }
+            }
+        }
+        // self.window.plot(
+        //     self.names[row * 3 + col][ci] as char,
+        //     col as u8,
+        //     row as u8,
+        //     ColorCode::new(Color::LightGray, Color::Black),
+        // );
+    }
+}
 
 struct RunningScript;
 
