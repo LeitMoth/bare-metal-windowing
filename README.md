@@ -2,6 +2,9 @@
 
 Install `qemu` and `cargo install bootimage`, then run with `cargo run`.
 
+## Project 10:
+Use arrow keys to navigate between files.
+
 ## Project 7: Bare-Metal Windowing Editor
 
 A basic "OS" that is just four windows with text editors in them.

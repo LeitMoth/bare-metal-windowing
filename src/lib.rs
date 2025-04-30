@@ -147,9 +147,46 @@ impl Active {
 
 // #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct SwimInterface {
+    rename_bar: RenameBar,
+    task_manager: TaskManager,
     file_system: FsType,
     active: Active,
     apps: [App; 4],
+}
+
+// TODO(colin): add fields
+struct TaskManager;
+struct RenameBar;
+
+impl TaskManager {
+    fn draw(&self) {
+        let color = ColorCode::new(
+            Color::LightGray,
+            Color::Black
+        );
+        let plot2 = |x, y, c1, c2| {
+            plot(c1, x, y, color);
+            plot(c2, x + 1, y, color);
+        };
+        plot2(WIN_REGION_WIDTH,0, 'F','1');
+        plot2(WIN_REGION_WIDTH,1, '0',' ');
+        plot2(WIN_REGION_WIDTH,2, 'F','2');
+        plot2(WIN_REGION_WIDTH,3, '0',' ');
+        plot2(WIN_REGION_WIDTH,4, 'F','3');
+        plot2(WIN_REGION_WIDTH,5, '0',' ');
+        plot2(WIN_REGION_WIDTH,6, 'F','4');
+        plot2(WIN_REGION_WIDTH,7, '0',' ');
+    }
+}
+
+impl RenameBar {
+    fn draw(&self) {
+        let color = ColorCode::new(
+            Color::LightGray,
+            Color::Black
+        );
+        "F5 - Filename: ".chars().enumerate().for_each(|(i,c)| plot(c,i,0, color));
+    }
 }
 
 impl Default for SwimInterface {
@@ -243,7 +280,13 @@ impl Default for SwimInterface {
             App::TextEditor(TextEditor::new(w_bottom_left)),
             App::TextEditor(TextEditor::new(w_bottom_right)),
         ];
+
+        let task_manager = TaskManager;
+        let rename_bar = RenameBar;
+
         Self {
+            rename_bar,
+            task_manager,
             file_system,
             active: Active::TopLeft,
             apps,
@@ -295,6 +338,8 @@ impl SwimInterface {
             t.draw();
             // t.window.dbgdraw()
         }
+        self.rename_bar.draw();
+        self.task_manager.draw();
     }
 
     pub fn key(&mut self, key: DecodedKey) {
