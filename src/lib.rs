@@ -52,6 +52,13 @@ enum Active {
     BottomRight = 3,
 }
 
+fn plots(s: &str, x: usize, y: usize, limit: Option<usize>, color: ColorCode) {
+    s.chars()
+        .take(limit.unwrap_or(BUFFER_WIDTH - x))
+        .enumerate()
+        .for_each(|(i, c)| plot(c, x + i, y, color));
+}
+
 impl Active {
     fn draw_label(&self, active: bool) {
         let color = ColorCode::new(
@@ -68,16 +75,40 @@ impl Active {
         };
         match self {
             Active::TopLeft => {
-                plot2(MIDDLE_X / 2, 1, 'F', '1');
+                plots(
+                    "F1\u{C4}\u{C4}(e)dit\u{C4}\u{C4}(r)un",
+                    MIDDLE_X / 2 - 9,
+                    1,
+                    None,
+                    color,
+                );
             }
             Active::TopRight => {
-                plot2(MIDDLE_X * 3 / 2, 1, 'F', '2');
+                plots(
+                    "F2\u{C4}\u{C4}(e)dit\u{C4}\u{C4}(r)un",
+                    MIDDLE_X * 3 / 2 - 9,
+                    1,
+                    None,
+                    color,
+                );
             }
             Active::BottomLeft => {
-                plot2(MIDDLE_X / 2, MIDDLE_Y, 'F', '3');
+                plots(
+                    "F3\u{C4}\u{C4}(e)dit\u{C4}\u{C4}(r)un",
+                    MIDDLE_X / 2 - 9,
+                    MIDDLE_Y,
+                    None,
+                    color,
+                );
             }
             Active::BottomRight => {
-                plot2(MIDDLE_X * 3 / 2, MIDDLE_Y, 'F', '4');
+                plots(
+                    "F4\u{C4}\u{C4}(e)dit\u{C4}\u{C4}(r)un",
+                    MIDDLE_X * 3 / 2 - 9,
+                    MIDDLE_Y,
+                    None,
+                    color,
+                );
             }
         }
     }
@@ -160,32 +191,26 @@ struct RenameBar;
 
 impl TaskManager {
     fn draw(&self) {
-        let color = ColorCode::new(
-            Color::LightGray,
-            Color::Black
-        );
+        let color = ColorCode::new(Color::LightGray, Color::Black);
         let plot2 = |x, y, c1, c2| {
             plot(c1, x, y, color);
             plot(c2, x + 1, y, color);
         };
-        plot2(WIN_REGION_WIDTH,0, 'F','1');
-        plot2(WIN_REGION_WIDTH,1, '0',' ');
-        plot2(WIN_REGION_WIDTH,2, 'F','2');
-        plot2(WIN_REGION_WIDTH,3, '0',' ');
-        plot2(WIN_REGION_WIDTH,4, 'F','3');
-        plot2(WIN_REGION_WIDTH,5, '0',' ');
-        plot2(WIN_REGION_WIDTH,6, 'F','4');
-        plot2(WIN_REGION_WIDTH,7, '0',' ');
+        plot2(WIN_REGION_WIDTH, 0, 'F', '1');
+        plot2(WIN_REGION_WIDTH, 1, '0', ' ');
+        plot2(WIN_REGION_WIDTH, 2, 'F', '2');
+        plot2(WIN_REGION_WIDTH, 3, '0', ' ');
+        plot2(WIN_REGION_WIDTH, 4, 'F', '3');
+        plot2(WIN_REGION_WIDTH, 5, '0', ' ');
+        plot2(WIN_REGION_WIDTH, 6, 'F', '4');
+        plot2(WIN_REGION_WIDTH, 7, '0', ' ');
     }
 }
 
 impl RenameBar {
     fn draw(&self) {
-        let color = ColorCode::new(
-            Color::LightGray,
-            Color::Black
-        );
-        "F5 - Filename: ".chars().enumerate().for_each(|(i,c)| plot(c,i,0, color));
+        let color = ColorCode::new(Color::LightGray, Color::Black);
+        plots("F5 - Filename: ", 0, 0, None, color);
     }
 }
 
