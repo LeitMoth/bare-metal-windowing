@@ -2,10 +2,12 @@
 
 mod window;
 
+use file_system_solution::FileSystem;
 use pc_keyboard::{DecodedKey, KeyCode};
 use pluggable_interrupt_os::vga_buffer::{
     is_drawable, plot, Color, ColorCode, BUFFER_HEIGHT, BUFFER_WIDTH,
 };
+use ramdisk::RamDisk;
 use window::{TextEditor, Window};
 
 use core::prelude::rust_2024::derive;
@@ -135,27 +137,114 @@ impl Active {
 
 // #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct SwimInterface {
+    file_system: FileSystem<
+        MAX_OPEN,
+        BLOCK_SIZE,
+        NUM_BLOCKS,
+        MAX_FILE_BLOCKS,
+        MAX_FILE_BYTES,
+        MAX_FILES_STORED,
+        MAX_FILENAME_BYTES,
+    >,
     active: Active,
     text_editors: [TextEditor; 4],
 }
 
 impl Default for SwimInterface {
     fn default() -> Self {
-        let windows = [
-            Window::new(1, 2, WIDTH_LEFT, HEIGHT_UP),
-            Window::new(1 + 1 + WIDTH_LEFT, 2, WIDTH_RIGHT, HEIGHT_UP),
-            Window::new(1, 2 + 1 + HEIGHT_UP, WIDTH_LEFT, HEIGHT_DOWN),
-            Window::new(
-                1 + 1 + WIDTH_LEFT,
-                2 + 1 + HEIGHT_UP,
-                WIDTH_RIGHT,
-                HEIGHT_DOWN,
-            ),
-        ];
+        let w_top_left = Window::new(1, 2, WIDTH_LEFT, HEIGHT_UP);
+        let w_top_right = Window::new(1 + 1 + WIDTH_LEFT, 2, WIDTH_RIGHT, HEIGHT_UP);
+        let w_bottom_left = Window::new(1, 2 + 1 + HEIGHT_UP, WIDTH_LEFT, HEIGHT_DOWN);
+        let w_bottom_right = Window::new(
+            1 + 1 + WIDTH_LEFT,
+            2 + 1 + HEIGHT_UP,
+            WIDTH_RIGHT,
+            HEIGHT_DOWN,
+        );
 
+        let rd = RamDisk::<BLOCK_SIZE, NUM_BLOCKS>::new();
+        let mut file_system = FileSystem::new(rd);
+
+        {
+            let fd_hello = file_system.open_create("hello").unwrap();
+            file_system
+                .write(fd_hello, r#"print("Hello, world!")"#.as_bytes())
+                .unwrap();
+            file_system.close(fd_hello).unwrap();
+        }
+
+        {
+            let fd_nums = file_system.open_create("nums").unwrap();
+            file_system
+                .write(
+                    fd_nums,
+                    r#"print(1)
+        print(257)"#
+                        .as_bytes(),
+                )
+                .unwrap();
+            file_system.close(fd_nums).unwrap();
+        }
+
+        {
+            let fd_average = file_system.open_create("average").unwrap();
+            file_system
+                .write(
+                    fd_average,
+                    r#"sum := 0
+        count := 0
+        averaging := true
+        while averaging {
+            num := input("Enter a number:")
+            if (num == "quit") {
+                averaging := false
+            } else {
+                sum := (sum + num)
+                count := (count + 1)
+            }
+        }
+        print((sum / count))"#
+                        .as_bytes(),
+                )
+                .unwrap();
+            file_system.close(fd_average).unwrap();
+        }
+
+        {
+            let fd_pi = file_system.open_create("pi").unwrap();
+            file_system
+                .write(
+                    fd_pi,
+                    r#"sum := 0
+        i := 0
+        neg := false
+        terms := input("Num terms:")
+        while (i < terms) {
+            term := (1.0 / ((2.0 * i) + 1.0))
+            if neg {
+                term := -term
+            }
+            sum := (sum + term)
+            neg := not neg
+            i := (i + 1)
+        }
+        print((4 * sum))"#
+                        .as_bytes(),
+                )
+                .unwrap();
+            file_system.close(fd_pi).unwrap();
+        }
+
+        let text_editors = [
+            TextEditor::new(w_top_left),
+            TextEditor::new(w_top_right),
+            TextEditor::new(w_bottom_left),
+            TextEditor::new(w_bottom_right),
+        ];
         Self {
+            file_system,
             active: Active::TopLeft,
-            text_editors: windows.map(TextEditor::new),
+            text_editors,
         }
     }
 }
