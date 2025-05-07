@@ -1,14 +1,14 @@
 #![no_std]
 
-mod window;
+mod app;
 
+use app::{explorer::Explorer, window::Window, App};
 use file_system_solution::FileSystem;
 use pc_keyboard::{DecodedKey, KeyCode};
 use pluggable_interrupt_os::vga_buffer::{
     is_drawable, plot, Color, ColorCode, BUFFER_HEIGHT, BUFFER_WIDTH,
 };
 use ramdisk::RamDisk;
-use window::{App, Explorer, TextEditor, Window};
 
 use core::prelude::rust_2024::derive;
 
