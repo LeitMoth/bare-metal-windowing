@@ -2,7 +2,7 @@ use pluggable_interrupt_os::vga_buffer::{plot, Color, ColorCode};
 
 use crate::{FsType, MAX_FILENAME_BYTES};
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Window {
     pub x1: u8,
     pub y1: u8,

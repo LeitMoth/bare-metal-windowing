@@ -4,13 +4,31 @@ mod app;
 
 use app::{explorer::Explorer, window::Window, App};
 use file_system_solution::FileSystem;
+use gc_heap::GenerationalHeap;
 use pc_keyboard::{DecodedKey, KeyCode};
 use pluggable_interrupt_os::vga_buffer::{
     is_drawable, plot, Color, ColorCode, BUFFER_HEIGHT, BUFFER_WIDTH,
 };
 use ramdisk::RamDisk;
+use simple_interp::{ArrayString, Interpreter, InterpreterOutput};
 
 use core::prelude::rust_2024::derive;
+
+const MAX_TOKENS: usize = 100;
+const MAX_LITERAL_CHARS: usize = 15;
+const STACK_DEPTH: usize = 20;
+const MAX_LOCAL_VARS: usize = 10;
+const HEAP_SIZE: usize = 256;
+const MAX_HEAP_BLOCKS: usize = HEAP_SIZE;
+
+type InterpType = Interpreter<
+    MAX_TOKENS,
+    MAX_LITERAL_CHARS,
+    STACK_DEPTH,
+    MAX_LOCAL_VARS,
+    WIN_WIDTH,
+    GenerationalHeap<HEAP_SIZE, MAX_HEAP_BLOCKS, 2>,
+>;
 
 const TASK_MANAGER_WIDTH: usize = 10;
 const WIN_REGION_WIDTH: usize = BUFFER_WIDTH - TASK_MANAGER_WIDTH;
@@ -239,7 +257,7 @@ impl Default for SwimInterface {
                 .write(
                     fd_nums,
                     r#"print(1)
-        print(257)"#
+print(257)"#
                         .as_bytes(),
                 )
                 .unwrap();
@@ -252,18 +270,18 @@ impl Default for SwimInterface {
                 .write(
                     fd_average,
                     r#"sum := 0
-        count := 0
-        averaging := true
-        while averaging {
-            num := input("Enter a number:")
-            if (num == "quit") {
-                averaging := false
-            } else {
-                sum := (sum + num)
-                count := (count + 1)
-            }
-        }
-        print((sum / count))"#
+count := 0
+averaging := true
+while averaging {
+    num := input("Enter a number:")
+    if (num == "quit") {
+        averaging := false
+    } else {
+        sum := (sum + num)
+        count := (count + 1)
+    }
+}
+print((sum / count))"#
                         .as_bytes(),
                 )
                 .unwrap();
@@ -276,19 +294,19 @@ impl Default for SwimInterface {
                 .write(
                     fd_pi,
                     r#"sum := 0
-        i := 0
-        neg := false
-        terms := input("Num terms:")
-        while (i < terms) {
-            term := (1.0 / ((2.0 * i) + 1.0))
-            if neg {
-                term := -term
-            }
-            sum := (sum + term)
-            neg := not neg
-            i := (i + 1)
-        }
-        print((4 * sum))"#
+i := 0
+neg := false
+terms := input("Num terms:")
+while (i < terms) {
+    term := (1.0 / ((2.0 * i) + 1.0))
+    if neg {
+        term := -term
+    }
+    sum := (sum + term)
+    neg := not neg
+    i := (i + 1)
+}
+print((4 * sum))"#
                         .as_bytes(),
                 )
                 .unwrap();
@@ -395,11 +413,15 @@ impl SwimInterface {
         const ASCII_DEL: char = '\x7F';
         const ASCII_BS: char = '\x08';
 
-        match key {
+        if let Some(newapp) = match key {
             ASCII_ENTER => self.apps[self.active as usize].newline(),
             ASCII_BS | ASCII_DEL => self.apps[self.active as usize].backspace(),
-            k if is_drawable(k) => self.apps[self.active as usize].insert_char(key),
-            _ => {}
+            k if is_drawable(k) => {
+                self.apps[self.active as usize].insert_char(key, &mut self.file_system)
+            }
+            _ => None,
+        } {
+            self.apps[self.active as usize] = newapp;
         }
     }
 }

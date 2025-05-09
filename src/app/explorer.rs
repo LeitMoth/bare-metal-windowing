@@ -1,3 +1,4 @@
+use file_system_solution::FileSystemError;
 use pluggable_interrupt_os::vga_buffer::{Color, ColorCode};
 
 use crate::{FsType, MAX_FILENAME_BYTES};
@@ -8,7 +9,7 @@ pub struct Explorer {
     selected: usize,
     num_files: usize,
     names: [[u8; MAX_FILENAME_BYTES]; 3 * 10], // 3 cols, 10 rows
-    window: Window,
+    pub window: Window,
 }
 
 impl Explorer {
@@ -20,6 +21,17 @@ impl Explorer {
             names,
             window,
         }
+    }
+
+    pub fn read_selected(
+        &mut self,
+        buf: &mut [u8],
+        fs: &mut FsType,
+    ) -> Result<usize, FileSystemError> {
+        let filename = self.name_as_slice(self.selected);
+        let filename = str::from_utf8(filename).map_err(|_| FileSystemError::FileNotFound)?;
+        let fd = fs.open_read(filename)?;
+        fs.read(fd, buf)
     }
 
     fn name_as_slice(&self, i: usize) -> &[u8] {
