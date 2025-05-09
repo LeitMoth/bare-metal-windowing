@@ -7,7 +7,7 @@ use crate::InterpType;
 use super::window::Window;
 
 pub struct RunningScript {
-    window: Window,
+    pub window: Window,
     interpreter: InterpType,
     iobuffer: IOBuffer,
     status: TickStatus,

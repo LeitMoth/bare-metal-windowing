@@ -3,6 +3,7 @@ use explorer::Explorer;
 use pluggable_interrupt_os::println;
 use script::RunningScript;
 use simple_interp::Interpreter;
+use window::Window;
 
 use crate::{FsType, MAX_FILE_BYTES};
 
@@ -18,6 +19,14 @@ pub enum App {
 }
 
 impl App {
+    pub fn exit(&self) -> Window {
+        match self {
+            App::TextEditor(text_editor) => todo!("handle saving logic"),
+            App::Explorer(explorer) => explorer.window.clone(),
+            App::RunningScript(running_script) => running_script.window.clone(),
+        }
+    }
+
     pub fn title(&self) -> &'static str {
         match self {
             App::TextEditor(_) => "EDITING",

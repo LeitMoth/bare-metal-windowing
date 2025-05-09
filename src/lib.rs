@@ -380,6 +380,8 @@ impl SwimInterface {
                 App::RunningScript(ref mut running_script) => {
                     if running_script.tick() {
                         self.ticks[self.last_ticked] += 1;
+                        // IMPORTANT: this break mades it so that only
+                        // one script ticks per overall tick
                         break;
                     }
                 }
@@ -445,6 +447,11 @@ impl SwimInterface {
             KeyCode::F2 => self.switch_active(Active::TopRight),
             KeyCode::F3 => self.switch_active(Active::BottomLeft),
             KeyCode::F4 => self.switch_active(Active::BottomRight),
+            KeyCode::F6 => {
+                let window = self.apps[self.active as usize].exit();
+                self.apps[self.active as usize] =
+                    App::Explorer(Explorer::new(window, &mut self.file_system));
+            }
             KeyCode::ArrowLeft => self.apps[self.active as usize].arrow_left(),
             KeyCode::ArrowRight => self.apps[self.active as usize].arrow_right(),
             KeyCode::ArrowUp => self.apps[self.active as usize].arrow_up(),
