@@ -2,12 +2,13 @@ use core::fmt::Write;
 use pluggable_interrupt_os::vga_buffer::{Color, ColorCode};
 use simple_interp::{ArrayString, InterpreterOutput, TickStatus};
 
-use crate::InterpType;
+use crate::{InterpType, MAX_FILENAME_BYTES};
 
 use super::window::Window;
 
 pub struct RunningScript {
     pub window: Window,
+    pub filename: ArrayString<MAX_FILENAME_BYTES>,
     interpreter: InterpType,
     iobuffer: IOBuffer,
     status: TickStatus,
@@ -51,11 +52,16 @@ impl InterpreterOutput for IOBuffer {
 }
 
 impl RunningScript {
-    pub fn new(window: Window, interpreter: InterpType) -> Self {
+    pub fn new(
+        window: Window,
+        filename: ArrayString<MAX_FILENAME_BYTES>,
+        interpreter: InterpType,
+    ) -> Self {
         let outbuffer = Default::default();
         window.clear();
         Self {
             window,
+            filename,
             interpreter,
             iobuffer: outbuffer,
             status: TickStatus::Continuing,

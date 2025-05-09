@@ -77,8 +77,15 @@ fn plots(s: &str, x: usize, y: usize, limit: Option<usize>, color: ColorCode) {
         .for_each(|(i, c)| plot(c, x + i, y, color));
 }
 
+fn plotu(s: &[u8], x: usize, y: usize, limit: Option<usize>, color: ColorCode) {
+    s.iter()
+        .take(limit.unwrap_or(BUFFER_WIDTH - x))
+        .enumerate()
+        .for_each(|(i, c)| plot(*c as char, x + i, y, color));
+}
+
 impl Active {
-    fn draw_label(&self, titles: [&str; 4], active: bool) {
+    fn draw_label(&self, titles: &[ArrayString<64>; 4], active: bool) {
         let color = ColorCode::new(
             if active {
                 Color::LightGreen
@@ -89,31 +96,55 @@ impl Active {
         );
         match self {
             Active::TopLeft => {
-                plots("F1\u{C4}\u{C4}", MIDDLE_X / 2 - 9, 1, None, color);
-                plots(titles[0], MIDDLE_X / 2 - 9 + 4, 1, None, color);
+                plots("F1\u{C4}\u{C4}", MIDDLE_X / 2 - 14, 1, None, color);
+                plots(
+                    titles[0].as_str().unwrap_or("ERR"),
+                    MIDDLE_X / 2 - 14 + 4,
+                    1,
+                    None,
+                    color,
+                );
             }
             Active::TopRight => {
-                plots("F2\u{C4}\u{C4}", MIDDLE_X * 3 / 2 - 9, 1, None, color);
-                plots(titles[1], MIDDLE_X * 3 / 2 - 9 + 4, 1, None, color);
+                plots("F2\u{C4}\u{C4}", MIDDLE_X * 3 / 2 - 14, 1, None, color);
+                plots(
+                    titles[1].as_str().unwrap_or("ERR"),
+                    MIDDLE_X * 3 / 2 - 14 + 4,
+                    1,
+                    None,
+                    color,
+                );
             }
             Active::BottomLeft => {
-                plots("F3\u{C4}\u{C4}", MIDDLE_X / 2 - 9, MIDDLE_Y, None, color);
-                plots(titles[2], MIDDLE_X / 2 - 9 + 4, MIDDLE_Y, None, color);
-            }
-            Active::BottomRight => {
+                plots("F3\u{C4}\u{C4}", MIDDLE_X / 2 - 14, MIDDLE_Y, None, color);
                 plots(
-                    "F4\u{C4}\u{C4}",
-                    MIDDLE_X * 3 / 2 - 9,
+                    titles[2].as_str().unwrap_or("ERR"),
+                    MIDDLE_X / 2 - 14 + 4,
                     MIDDLE_Y,
                     None,
                     color,
                 );
-                plots(titles[3], MIDDLE_X * 3 / 2 - 9 + 4, MIDDLE_Y, None, color);
+            }
+            Active::BottomRight => {
+                plots(
+                    "F4\u{C4}\u{C4}",
+                    MIDDLE_X * 3 / 2 - 14,
+                    MIDDLE_Y,
+                    None,
+                    color,
+                );
+                plots(
+                    titles[3].as_str().unwrap_or("ERR"),
+                    MIDDLE_X * 3 / 2 - 14 + 4,
+                    MIDDLE_Y,
+                    None,
+                    color,
+                );
             }
         }
     }
 
-    fn draw(&self, titles: [&str; 4], active: bool) {
+    fn draw(&self, titles: &[ArrayString<64>; 4], active: bool) {
         let (x1, y1, x2, y2) = match self {
             Active::TopLeft => (0, 1, MIDDLE_X, MIDDLE_Y),
             Active::TopRight => (MIDDLE_X, 1, WIN_REGION_WIDTH - 2, MIDDLE_Y),
@@ -448,9 +479,9 @@ impl SwimInterface {
             self.apps[Active::BottomLeft as usize].title(),
             self.apps[Active::BottomRight as usize].title(),
         ];
-        self.active.draw(titles, false);
+        self.active.draw(&titles, false);
         self.active = new;
-        self.active.draw(titles, true);
+        self.active.draw(&titles, true);
     }
 
     fn handle_raw(&mut self, key: KeyCode) {

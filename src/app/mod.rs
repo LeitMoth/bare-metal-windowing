@@ -1,10 +1,11 @@
 use editor::TextEditor;
 use explorer::Explorer;
 use script::RunningScript;
-use simple_interp::Interpreter;
+use simple_interp::{ArrayString, Interpreter};
 use window::Window;
 
 use crate::{FsType, MAX_FILE_BYTES};
+use core::fmt::Write;
 
 mod editor;
 pub mod explorer;
@@ -32,12 +33,28 @@ impl App {
         }
     }
 
-    pub fn title(&self) -> &'static str {
+    pub fn title(&self) -> ArrayString<64> {
+        let mut a = ArrayString::<64>::default();
         match self {
-            App::TextEditor(_) => "EDITING",
-            App::Explorer(_) => "(e)dit\u{C4}\u{C4}(r)un",
-            App::RunningScript(_) => "\u{C4}\u{C4}\u{C4}\u{C4}F6 to exit",
-        }
+            App::TextEditor(text) => {
+                let _ = write!(
+                    a,
+                    "EDIT:{},F6 to exit",
+                    text.filename.as_str().unwrap_or("INVALID_NAME")
+                );
+            }
+            App::Explorer(_) => {
+                let _ = write!(a, "(e)dit,(r)un");
+            }
+            App::RunningScript(script) => {
+                let _ = write!(
+                    a,
+                    "RUN:{},F6 to exit",
+                    script.filename.as_str().unwrap_or("INVALID_NAME")
+                );
+            }
+        };
+        a
     }
     pub fn arrow_left(&mut self) {
         match self {
@@ -102,6 +119,7 @@ impl App {
                         if let Ok(contents) = str::from_utf8(&buf[..n]) {
                             Some(App::RunningScript(RunningScript::new(
                                 explorer.window.clone(),
+                                explorer.name(),
                                 Interpreter::new(contents),
                             )))
                         } else {

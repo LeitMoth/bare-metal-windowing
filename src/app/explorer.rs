@@ -51,7 +51,8 @@ impl Explorer {
         let mut end = MAX_FILENAME_BYTES;
         for j in 0..MAX_FILENAME_BYTES {
             if self.names[i][j] == 0 {
-                end = j
+                end = j;
+                break;
             }
         }
         &self.names[i][0..end]

@@ -38,7 +38,7 @@ pub struct TextEditor {
     cursor: Cursor,
     scroll: usize,
     window: Window,
-    filename: ArrayString<MAX_FILENAME_BYTES>,
+    pub filename: ArrayString<MAX_FILENAME_BYTES>,
 }
 
 impl TextEditor {
