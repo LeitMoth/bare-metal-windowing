@@ -77,6 +77,10 @@ impl TextEditor {
             }
         }
 
+        while j > 1 && buf[j - 1] == '\n' as u8 {
+            j -= 1;
+        }
+
         j
     }
 
