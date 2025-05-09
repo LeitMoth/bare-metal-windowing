@@ -37,7 +37,7 @@ pub struct TextEditor {
     lines: [Line; DOC_LINES],
     cursor: Cursor,
     scroll: usize,
-    window: Window,
+    pub window: Window,
     pub filename: ArrayString<MAX_FILENAME_BYTES>,
 }
 
@@ -55,6 +55,29 @@ impl TextEditor {
         if self.cursor.col > self.lines[self.cursor.line].len {
             self.cursor.col = self.lines[self.cursor.line].len
         }
+    }
+
+    pub fn dump(&self, buf: &mut [u8]) -> usize {
+        let mut j = 0;
+        for i in 0..self.lines.len() {
+            for c in &self.lines[i].data[..self.lines[i].len] {
+                let c = *c as u8;
+                if j >= buf.len() {
+                    return j;
+                } else {
+                    buf[j] = c;
+                    j += 1;
+                }
+            }
+            if j >= buf.len() {
+                return j;
+            } else {
+                buf[j] = '\n' as u8;
+                j += 1;
+            }
+        }
+
+        j
     }
 
     pub fn insert_char(&mut self, c: char) {

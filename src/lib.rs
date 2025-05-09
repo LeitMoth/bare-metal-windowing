@@ -495,7 +495,8 @@ impl SwimInterface {
                 self.rename_bar.name.clear()
             }
             KeyCode::F6 => {
-                let window = self.apps[self.active as usize].exit();
+                let (window, err) = self.apps[self.active as usize].exit(&mut self.file_system);
+                self.rename_bar.name = err;
                 self.apps[self.active as usize] =
                     App::Explorer(Explorer::new(window, &mut self.file_system));
                 // refresh display

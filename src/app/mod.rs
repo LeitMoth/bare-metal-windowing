@@ -25,11 +25,32 @@ pub enum App {
 }
 
 impl App {
-    pub fn exit(&self) -> Window {
+    pub fn exit(&self, fs: &mut FsType) -> (Window, ArrayString<64>) {
+        let mut a = ArrayString::<64>::default();
         match self {
-            App::TextEditor(text_editor) => todo!("handle saving logic"),
-            App::Explorer(explorer) => explorer.window.clone(),
-            App::RunningScript(running_script) => running_script.window.clone(),
+            App::TextEditor(text_editor) => {
+                if let Ok(filename) = text_editor.filename.as_str() {
+                    let mut buffer = [0u8; MAX_FILE_BYTES];
+                    let len = text_editor.dump(&mut buffer);
+
+                    let full = fs
+                        .open_create(filename)
+                        .and_then(|fd| fs.write(fd, &buffer[..len]).and_then(|_| fs.close(fd)));
+
+                    match full {
+                        Ok(()) => (text_editor.window.clone(), a),
+                        Err(e) => {
+                            let _ = write!(a, "couldn't save: {e}");
+                            (text_editor.window.clone(), a)
+                        }
+                    }
+                } else {
+                    let _ = write!(a, "couldn't save: bad file name");
+                    (text_editor.window.clone(), a)
+                }
+            }
+            App::Explorer(explorer) => (explorer.window.clone(), a),
+            App::RunningScript(running_script) => (running_script.window.clone(), a),
         }
     }
 
