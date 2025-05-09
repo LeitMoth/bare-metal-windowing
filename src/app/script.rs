@@ -1,11 +1,6 @@
-use core::any::Any;
-
 use core::fmt::Write;
-use pluggable_interrupt_os::{
-    println,
-    vga_buffer::{plot, Color, ColorCode},
-};
-use simple_interp::{ArrayString, Interpreter, InterpreterOutput, TickStatus};
+use pluggable_interrupt_os::vga_buffer::{Color, ColorCode};
+use simple_interp::{ArrayString, InterpreterOutput, TickStatus};
 
 use crate::InterpType;
 
@@ -33,6 +28,16 @@ impl IOBuffer {
         match self.input_pos {
             None => &[],
             Some(begin) => &self.buf.buffer_slice()[begin..self.buf.buffer_slice().len() - 1],
+        }
+    }
+
+    fn input_done(&mut self) -> bool {
+        match self.input_pos {
+            None => false,
+            Some(begin) => {
+                begin + 1 < self.buf.buffer_slice().len()
+                    && self.buf.buffer_slice().last() == Some(&('\n' as u8))
+            }
         }
     }
 }
@@ -68,15 +73,12 @@ impl RunningScript {
             }
             TickStatus::Finished => false,
             TickStatus::AwaitInput => {
-                if let Some(c) = self.iobuffer.buf.buffer_slice().last() {
-                    let c = *c as char;
-                    if c == '\n' {
-                        let input = self.iobuffer.end_input();
-                        let input = str::from_utf8(input).unwrap_or("");
-                        match self.interpreter.provide_input(input) {
-                            Ok(()) => (),
-                            Err(e) => write!(self.iobuffer.buf, "{e}").unwrap_or(()),
-                        }
+                if self.iobuffer.input_done() {
+                    let input = self.iobuffer.end_input();
+                    let input = str::from_utf8(input).unwrap_or("");
+                    match self.interpreter.provide_input(input) {
+                        Ok(()) => self.status = TickStatus::Continuing,
+                        Err(e) => write!(self.iobuffer.buf, "{e}").unwrap_or(()),
                     }
                 }
 
@@ -87,9 +89,32 @@ impl RunningScript {
 
     pub fn draw(&mut self) {
         let color = ColorCode::new(Color::LightGray, Color::Black);
+        let color_inv = ColorCode::new(Color::Black, Color::LightGray);
 
+        // calculate the offset into the buffer we need to
+        // start at in order for the below code to
+        // print at most window.height() lines
+        let slice = self.iobuffer.buf.buffer_slice();
+        let mut count = 0;
+        let mut start = 0;
+        let mut lasti = slice.len();
+        for i in (0..slice.len()).rev() {
+            if lasti - i >= self.window.width() {
+                count += 1;
+                lasti = i;
+            }
+            if slice[i] == '\n' as u8 {
+                count += 1;
+                lasti = i;
+            }
+            if count >= self.window.height() {
+                start = i + 1;
+                break;
+            }
+        }
+
+        // dump everything from the buffer to screen, starting at start
         let mut cursor = 0;
-
         let pplot = |c, cursor| {
             self.window.plot(
                 c,
@@ -98,7 +123,7 @@ impl RunningScript {
                 color,
             );
         };
-        for c in self.iobuffer.buf.buffer_slice() {
+        for c in &slice[start..] {
             let c = *c as char;
             if c == '\n' {
                 let tmp = cursor + self.window.width();
@@ -112,5 +137,24 @@ impl RunningScript {
                 cursor += 1;
             }
         }
+
+        // draw cursor block
+        self.window.plot(
+            ' ',
+            (cursor % self.window.width()) as u8,
+            (cursor / self.window.width()) as u8,
+            color_inv,
+        );
+        cursor += 1;
+
+        // clear the rest
+        while cursor < self.window.width() * self.window.height() {
+            pplot(' ', cursor);
+            cursor += 1;
+        }
+    }
+
+    pub fn input(&mut self, c: char) {
+        self.iobuffer.buf.push_char(c);
     }
 }

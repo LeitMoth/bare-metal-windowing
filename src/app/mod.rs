@@ -61,7 +61,7 @@ impl App {
         match self {
             App::TextEditor(text_editor) => text_editor.newline(),
             App::Explorer(explorer) => {}
-            App::RunningScript(running_script) => todo!(),
+            App::RunningScript(running_script) => running_script.input('\n'),
         }
         None
     }
@@ -70,7 +70,7 @@ impl App {
         match self {
             App::TextEditor(text_editor) => text_editor.backspace(),
             App::Explorer(explorer) => {}
-            App::RunningScript(running_script) => todo!(),
+            App::RunningScript(running_script) => running_script.input('\u{8}'),
         }
         None
     }
@@ -99,7 +99,10 @@ impl App {
                 }
                 _ => None,
             },
-            App::RunningScript(running_script) => todo!(),
+            App::RunningScript(running_script) => {
+                running_script.input(c);
+                None
+            }
         }
     }
 

@@ -378,9 +378,10 @@ impl SwimInterface {
             self.last_ticked %= 4;
             match self.apps[self.last_ticked] {
                 App::RunningScript(ref mut running_script) => {
-                    running_script.tick();
-                    self.ticks[self.last_ticked] += 1;
-                    break;
+                    if running_script.tick() {
+                        self.ticks[self.last_ticked] += 1;
+                        break;
+                    }
                 }
                 _ => (),
             }
