@@ -135,7 +135,12 @@ impl App {
                     let mut buf = [0u8; MAX_FILE_BYTES];
                     if let Ok(n) = explorer.read_selected(&mut buf, fs) {
                         for c in &buf[..n] {
-                            text.insert_char(*c as char);
+                            let c = *c as char;
+                            if c == '\n' {
+                                text.newline();
+                            } else {
+                                text.insert_char(c);
+                            }
                         }
                         Some(App::TextEditor(text))
                     } else {
