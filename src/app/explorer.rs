@@ -31,7 +31,9 @@ impl Explorer {
         let filename = self.name_as_slice(self.selected);
         let filename = str::from_utf8(filename).map_err(|_| FileSystemError::FileNotFound)?;
         let fd = fs.open_read(filename)?;
-        fs.read(fd, buf)
+        let n = fs.read(fd, buf)?;
+        fs.close(fd)?;
+        Ok(n)
     }
 
     fn name_as_slice(&self, i: usize) -> &[u8] {

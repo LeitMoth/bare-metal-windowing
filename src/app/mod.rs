@@ -18,11 +18,18 @@ pub enum App {
 }
 
 impl App {
+    pub fn title(&self) -> &'static str {
+        match self {
+            App::TextEditor(_) => "EDITING",
+            App::Explorer(_) => "(e)dit\u{C4}\u{C4}(r)un",
+            App::RunningScript(_) => "\u{C4}\u{C4}\u{C4}\u{C4}F6 to exit",
+        }
+    }
     pub fn arrow_left(&mut self) {
         match self {
             App::TextEditor(text_editor) => text_editor.arrow_left(),
             App::Explorer(explorer) => explorer.arrow_left(),
-            App::RunningScript(running_script) => println!("{:?}", running_script),
+            App::RunningScript(running_script) => todo!(),
         }
     }
 
@@ -79,8 +86,6 @@ impl App {
                     let mut buf = [0u8; MAX_FILE_BYTES];
                     if let Ok(n) = explorer.read_selected(&mut buf, fs) {
                         if let Ok(contents) = str::from_utf8(&buf[..n]) {
-                            println!("{}", contents);
-                            panic!();
                             Some(App::RunningScript(RunningScript::new(
                                 explorer.window.clone(),
                                 Interpreter::new(contents),

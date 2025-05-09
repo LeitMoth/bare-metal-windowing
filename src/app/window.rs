@@ -43,4 +43,13 @@ impl Window {
         debug_assert!(self.y1 <= row && row <= self.y2);
         plot(c, col as usize, row as usize, color);
     }
+
+    pub fn clear(&self) {
+        let color = ColorCode::new(Color::LightGray, Color::Black);
+        for x in 0..self.width() {
+            for y in 0..self.height() {
+                self.plot(' ', x as u8, y as u8, color);
+            }
+        }
+    }
 }

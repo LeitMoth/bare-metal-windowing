@@ -12,7 +12,7 @@ use pluggable_interrupt_os::vga_buffer::{
 use ramdisk::RamDisk;
 use simple_interp::{ArrayString, Interpreter, InterpreterOutput};
 
-use core::prelude::rust_2024::derive;
+use core::{fmt::Write, prelude::rust_2024::derive};
 
 const MAX_TOKENS: usize = 100;
 const MAX_LITERAL_CHARS: usize = 15;
@@ -78,7 +78,7 @@ fn plots(s: &str, x: usize, y: usize, limit: Option<usize>, color: ColorCode) {
 }
 
 impl Active {
-    fn draw_label(&self, active: bool) {
+    fn draw_label(&self, titles: [&str; 4], active: bool) {
         let color = ColorCode::new(
             if active {
                 Color::LightGreen
@@ -89,45 +89,31 @@ impl Active {
         );
         match self {
             Active::TopLeft => {
-                plots(
-                    "F1\u{C4}\u{C4}(e)dit\u{C4}\u{C4}(r)un",
-                    MIDDLE_X / 2 - 9,
-                    1,
-                    None,
-                    color,
-                );
+                plots("F1\u{C4}\u{C4}", MIDDLE_X / 2 - 9, 1, None, color);
+                plots(titles[0], MIDDLE_X / 2 - 9 + 4, 1, None, color);
             }
             Active::TopRight => {
-                plots(
-                    "F2\u{C4}\u{C4}(e)dit\u{C4}\u{C4}(r)un",
-                    MIDDLE_X * 3 / 2 - 9,
-                    1,
-                    None,
-                    color,
-                );
+                plots("F2\u{C4}\u{C4}", MIDDLE_X * 3 / 2 - 9, 1, None, color);
+                plots(titles[1], MIDDLE_X * 3 / 2 - 9 + 4, 1, None, color);
             }
             Active::BottomLeft => {
-                plots(
-                    "F3\u{C4}\u{C4}(e)dit\u{C4}\u{C4}(r)un",
-                    MIDDLE_X / 2 - 9,
-                    MIDDLE_Y,
-                    None,
-                    color,
-                );
+                plots("F3\u{C4}\u{C4}", MIDDLE_X / 2 - 9, MIDDLE_Y, None, color);
+                plots(titles[2], MIDDLE_X / 2 - 9 + 4, MIDDLE_Y, None, color);
             }
             Active::BottomRight => {
                 plots(
-                    "F4\u{C4}\u{C4}(e)dit\u{C4}\u{C4}(r)un",
+                    "F4\u{C4}\u{C4}",
                     MIDDLE_X * 3 / 2 - 9,
                     MIDDLE_Y,
                     None,
                     color,
                 );
+                plots(titles[3], MIDDLE_X * 3 / 2 - 9 + 4, MIDDLE_Y, None, color);
             }
         }
     }
 
-    fn draw(&self, active: bool) {
+    fn draw(&self, titles: [&str; 4], active: bool) {
         let (x1, y1, x2, y2) = match self {
             Active::TopLeft => (0, 1, MIDDLE_X, MIDDLE_Y),
             Active::TopRight => (MIDDLE_X, 1, WIN_REGION_WIDTH - 2, MIDDLE_Y),
@@ -153,7 +139,7 @@ impl Active {
             plot(0xB3 as char, x2, row, color);
         }
 
-        self.draw_label(active);
+        self.draw_label(titles, active);
 
         match self {
             Active::TopLeft => {
@@ -163,7 +149,7 @@ impl Active {
                 plot(0xC5 as char, MIDDLE_X, MIDDLE_Y, color);
 
                 // here we must redraw because we overwrote this
-                Active::BottomLeft.draw_label(false);
+                Active::BottomLeft.draw_label(titles, false);
             }
             Active::TopRight => {
                 plot(0xC2 as char, MIDDLE_X, 1, color);
@@ -172,7 +158,7 @@ impl Active {
                 plot(0xB4 as char, WIN_REGION_WIDTH - 2, MIDDLE_Y, color);
 
                 // here we must redraw because we overwrote this
-                Active::BottomRight.draw_label(false);
+                Active::BottomRight.draw_label(titles, false);
             }
             Active::BottomLeft => {
                 plot(0xC3 as char, 0, MIDDLE_Y, color);
@@ -197,6 +183,8 @@ pub struct SwimInterface {
     file_system: FsType,
     active: Active,
     apps: [App; 4],
+    ticks: [usize; 4],
+    last_ticked: usize,
 }
 
 // TODO(colin): add fields
@@ -204,20 +192,57 @@ struct TaskManager;
 struct RenameBar;
 
 impl TaskManager {
-    fn draw(&self) {
+    fn draw(&self, ticks: &[usize; 4]) {
         let color = ColorCode::new(Color::LightGray, Color::Black);
+        let color_alt = ColorCode::new(Color::LightGreen, Color::Black);
         let plot2 = |x, y, c1, c2| {
             plot(c1, x, y, color);
             plot(c2, x + 1, y, color);
         };
+        let mut numbuf = ArrayString::<8>::default();
         plot2(WIN_REGION_WIDTH, 0, 'F', '1');
-        plot2(WIN_REGION_WIDTH, 1, '0', ' ');
+        plot(0xC0 as char, WIN_REGION_WIDTH, 1, color);
+        write!(numbuf, "{}", ticks[0]).unwrap_or(());
+        plots(
+            numbuf.as_str().unwrap_or("ERR"),
+            WIN_REGION_WIDTH + 1,
+            1,
+            Some(4),
+            color_alt,
+        );
         plot2(WIN_REGION_WIDTH, 2, 'F', '2');
-        plot2(WIN_REGION_WIDTH, 3, '0', ' ');
+        plot(0xC0 as char, WIN_REGION_WIDTH, 3, color);
+        numbuf.clear();
+        write!(numbuf, "{}", ticks[1]).unwrap_or(());
+        plots(
+            numbuf.as_str().unwrap_or("ERR"),
+            WIN_REGION_WIDTH + 1,
+            3,
+            Some(4),
+            color_alt,
+        );
         plot2(WIN_REGION_WIDTH, 4, 'F', '3');
-        plot2(WIN_REGION_WIDTH, 5, '0', ' ');
+        plot(0xC0 as char, WIN_REGION_WIDTH, 5, color);
+        numbuf.clear();
+        write!(numbuf, "{}", ticks[2]).unwrap_or(());
+        plots(
+            numbuf.as_str().unwrap_or("ERR"),
+            WIN_REGION_WIDTH + 1,
+            5,
+            Some(4),
+            color_alt,
+        );
         plot2(WIN_REGION_WIDTH, 6, 'F', '4');
-        plot2(WIN_REGION_WIDTH, 7, '0', ' ');
+        plot(0xC0 as char, WIN_REGION_WIDTH, 7, color);
+        numbuf.clear();
+        write!(numbuf, "{}", ticks[3]).unwrap_or(());
+        plots(
+            numbuf.as_str().unwrap_or("ERR"),
+            WIN_REGION_WIDTH + 1,
+            7,
+            Some(4),
+            color_alt,
+        );
     }
 }
 
@@ -329,24 +354,37 @@ print((4 * sum))"#
             file_system,
             active: Active::TopLeft,
             apps,
+            ticks: [0, 0, 0, 0],
+            last_ticked: 0,
         }
     }
 }
 
 impl SwimInterface {
-    pub fn init(&self) {
-        [
-            Active::TopLeft,
-            Active::TopRight,
-            Active::BottomLeft,
-            Active::BottomRight,
-        ]
-        .map(|x| x.draw(false));
-
-        self.active.draw(true);
+    pub fn init(&mut self) {
+        self.switch_active(Active::TopRight);
+        self.switch_active(Active::BottomLeft);
+        self.switch_active(Active::BottomRight);
+        self.switch_active(Active::TopLeft);
     }
+
     pub fn tick(&mut self) {
         // self.clear_current();
+
+        // Round robin, finds first app that is a script
+        // and runs it, if no apps are scripts, it gives up.
+        for _ in 1..4 {
+            self.last_ticked += 1;
+            self.last_ticked %= 4;
+            match self.apps[self.last_ticked] {
+                App::RunningScript(ref mut running_script) => {
+                    running_script.tick();
+                    self.ticks[self.last_ticked] += 1;
+                    break;
+                }
+                _ => (),
+            }
+        }
 
         // Each TextEditor should always fill every character
         // of its window when drawn, so we never need
@@ -378,7 +416,7 @@ impl SwimInterface {
             // t.window.dbgdraw()
         }
         self.rename_bar.draw();
-        self.task_manager.draw();
+        self.task_manager.draw(&self.ticks);
     }
 
     pub fn key(&mut self, key: DecodedKey) {
@@ -389,9 +427,15 @@ impl SwimInterface {
     }
 
     fn switch_active(&mut self, new: Active) {
-        self.active.draw(false);
+        let titles = [
+            self.apps[Active::TopLeft as usize].title(),
+            self.apps[Active::TopRight as usize].title(),
+            self.apps[Active::BottomLeft as usize].title(),
+            self.apps[Active::BottomRight as usize].title(),
+        ];
+        self.active.draw(titles, false);
         self.active = new;
-        self.active.draw(true);
+        self.active.draw(titles, true);
     }
 
     fn handle_raw(&mut self, key: KeyCode) {
@@ -422,6 +466,8 @@ impl SwimInterface {
             _ => None,
         } {
             self.apps[self.active as usize] = newapp;
+            // refresh display
+            self.switch_active(self.active);
         }
     }
 }
