@@ -178,6 +178,7 @@ impl Active {
 
 pub struct SwimInterface {
     rename_bar: RenameBar,
+    editing_name: bool,
     task_manager: TaskManager,
     file_system: FsType,
     active: Active,
@@ -187,8 +188,10 @@ pub struct SwimInterface {
 }
 
 struct TaskManager;
-// TODO(colin): add fields
-struct RenameBar;
+
+struct RenameBar {
+    name: ArrayString<64>,
+}
 
 impl TaskManager {
     fn draw(&self, ticks: &[usize; 4]) {
@@ -246,9 +249,16 @@ impl TaskManager {
 }
 
 impl RenameBar {
-    fn draw(&self) {
+    fn draw(&self, active: bool) {
         let color = ColorCode::new(Color::LightGray, Color::Black);
-        plots("F5 - Filename: ", 0, 0, None, color);
+        let green = ColorCode::new(Color::LightGreen, Color::Black);
+        let label = "F5 - Filename: ";
+        plots(label, 0, 0, None, if active { green } else { color });
+        let name = self.name.as_str().unwrap_or("");
+        plots(name, label.len(), 0, None, color);
+        for i in label.len() + name.len()..WIN_REGION_WIDTH {
+            plot(' ', i, 0, color);
+        }
     }
 }
 
@@ -345,10 +355,13 @@ print((4 * sum))"#
         ];
 
         let task_manager = TaskManager;
-        let rename_bar = RenameBar;
+        let rename_bar = RenameBar {
+            name: Default::default(),
+        };
 
         Self {
             rename_bar,
+            editing_name: false,
             task_manager,
             file_system,
             active: Active::TopLeft,
@@ -417,7 +430,7 @@ impl SwimInterface {
             t.draw();
             // t.window.dbgdraw()
         }
-        self.rename_bar.draw();
+        self.rename_bar.draw(self.editing_name);
         self.task_manager.draw(&self.ticks);
     }
 
@@ -446,6 +459,7 @@ impl SwimInterface {
             KeyCode::F2 => self.switch_active(Active::TopRight),
             KeyCode::F3 => self.switch_active(Active::BottomLeft),
             KeyCode::F4 => self.switch_active(Active::BottomRight),
+            KeyCode::F5 => self.editing_name = true,
             KeyCode::F6 => {
                 let window = self.apps[self.active as usize].exit();
                 self.apps[self.active as usize] =
@@ -466,17 +480,27 @@ impl SwimInterface {
         const ASCII_DEL: char = '\x7F';
         const ASCII_BS: char = '\x08';
 
-        if let Some(newapp) = match key {
-            ASCII_ENTER => self.apps[self.active as usize].newline(),
-            ASCII_BS | ASCII_DEL => self.apps[self.active as usize].backspace(),
-            k if is_drawable(k) => {
-                self.apps[self.active as usize].insert_char(key, &mut self.file_system)
+        if self.editing_name {
+            match key {
+                ASCII_ENTER => {
+                    self.editing_name = false;
+                    self.rename_bar.name.clear();
+                }
+                k => self.rename_bar.name.push_char(k),
             }
-            _ => None,
-        } {
-            self.apps[self.active as usize] = newapp;
-            // refresh display
-            self.switch_active(self.active);
+        } else {
+            if let Some(newapp) = match key {
+                ASCII_ENTER => self.apps[self.active as usize].newline(),
+                ASCII_BS | ASCII_DEL => self.apps[self.active as usize].backspace(),
+                k if is_drawable(k) => {
+                    self.apps[self.active as usize].insert_char(key, &mut self.file_system)
+                }
+                _ => None,
+            } {
+                self.apps[self.active as usize] = newapp;
+                // refresh display
+                self.switch_active(self.active);
+            }
         }
     }
 }
