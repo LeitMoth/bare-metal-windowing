@@ -38,7 +38,7 @@ impl App {
         match self {
             App::TextEditor(text_editor) => text_editor.arrow_left(),
             App::Explorer(explorer) => explorer.arrow_left(),
-            App::RunningScript(running_script) => todo!(),
+            App::RunningScript(_) => {}
         }
     }
 
@@ -46,7 +46,7 @@ impl App {
         match self {
             App::TextEditor(text_editor) => text_editor.arrow_right(),
             App::Explorer(explorer) => explorer.arrow_right(),
-            App::RunningScript(running_script) => todo!(),
+            App::RunningScript(_) => {}
         }
     }
 
@@ -54,7 +54,7 @@ impl App {
         match self {
             App::TextEditor(text_editor) => text_editor.arrow_up(),
             App::Explorer(explorer) => explorer.arrow_up(),
-            App::RunningScript(running_script) => todo!(),
+            App::RunningScript(_) => {}
         }
     }
 
@@ -62,14 +62,14 @@ impl App {
         match self {
             App::TextEditor(text_editor) => text_editor.arrow_down(),
             App::Explorer(explorer) => explorer.arrow_down(),
-            App::RunningScript(running_script) => todo!(),
+            App::RunningScript(_) => {}
         }
     }
 
     pub fn newline(&mut self) -> Option<App> {
         match self {
             App::TextEditor(text_editor) => text_editor.newline(),
-            App::Explorer(explorer) => {}
+            App::Explorer(_) => {}
             App::RunningScript(running_script) => running_script.input('\n'),
         }
         None
@@ -78,7 +78,7 @@ impl App {
     pub fn backspace(&mut self) -> Option<App> {
         match self {
             App::TextEditor(text_editor) => text_editor.backspace(),
-            App::Explorer(explorer) => {}
+            App::Explorer(_) => {}
             App::RunningScript(running_script) => running_script.input('\u{8}'),
         }
         None
