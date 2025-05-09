@@ -111,6 +111,19 @@ impl App {
                         None
                     }
                 }
+                'e' => {
+                    let mut text = TextEditor::new(explorer.window.clone(), explorer.name());
+
+                    let mut buf = [0u8; MAX_FILE_BYTES];
+                    if let Ok(n) = explorer.read_selected(&mut buf, fs) {
+                        for c in &buf[..n] {
+                            text.insert_char(*c as char);
+                        }
+                        Some(App::TextEditor(text))
+                    } else {
+                        None
+                    }
+                }
                 _ => None,
             },
             App::RunningScript(running_script) => {

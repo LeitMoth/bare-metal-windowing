@@ -1,4 +1,7 @@
 use pluggable_interrupt_os::vga_buffer::{Color, ColorCode};
+use simple_interp::ArrayString;
+
+use crate::MAX_FILENAME_BYTES;
 
 use super::window::Window;
 
@@ -35,15 +38,17 @@ pub struct TextEditor {
     cursor: Cursor,
     scroll: usize,
     window: Window,
+    filename: ArrayString<MAX_FILENAME_BYTES>,
 }
 
 impl TextEditor {
-    pub fn new(window: Window) -> Self {
+    pub fn new(window: Window, filename: ArrayString<MAX_FILENAME_BYTES>) -> Self {
         Self {
             lines: [Line::default(); DOC_LINES],
             cursor: Cursor { line: 0, col: 0 },
             scroll: 0,
             window,
+            filename,
         }
     }
     fn sanity(&mut self) {

@@ -459,7 +459,10 @@ impl SwimInterface {
             KeyCode::F2 => self.switch_active(Active::TopRight),
             KeyCode::F3 => self.switch_active(Active::BottomLeft),
             KeyCode::F4 => self.switch_active(Active::BottomRight),
-            KeyCode::F5 => self.editing_name = true,
+            KeyCode::F5 => {
+                self.editing_name = true;
+                self.rename_bar.name.clear()
+            }
             KeyCode::F6 => {
                 let window = self.apps[self.active as usize].exit();
                 self.apps[self.active as usize] =
@@ -484,7 +487,47 @@ impl SwimInterface {
             match key {
                 ASCII_ENTER => {
                     self.editing_name = false;
-                    self.rename_bar.name.clear();
+
+                    match self.rename_bar.name.as_str() {
+                        Ok(name) => {
+                            if name.len() < 1 {
+                                self.rename_bar.name.clear();
+                                let _ = write!(
+                                    self.rename_bar.name,
+                                    "ERROR File name must be at least one character"
+                                );
+                            } else {
+                                match self.file_system.open_create(name) {
+                                    Ok(fd) => match self.file_system.close(fd) {
+                                        Ok(()) => {
+                                            self.rename_bar.name.clear();
+                                        }
+                                        Err(e) => {
+                                            self.rename_bar.name.clear();
+                                            let _ = write!(self.rename_bar.name, "ERROR {e}");
+                                        }
+                                    },
+                                    Err(e) => {
+                                        self.rename_bar.name.clear();
+                                        let _ = write!(self.rename_bar.name, "ERROR {e}");
+                                    }
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            self.rename_bar.name.clear();
+                            let _ = write!(self.rename_bar.name, "ERROR {e}");
+                        }
+                    }
+
+                    for i in 0..4 {
+                        if let App::Explorer(ref exp) = self.apps[i] {
+                            self.apps[i] = App::Explorer(Explorer::new(
+                                exp.window.clone(),
+                                &mut self.file_system,
+                            ));
+                        }
+                    }
                 }
                 k => self.rename_bar.name.push_char(k),
             }

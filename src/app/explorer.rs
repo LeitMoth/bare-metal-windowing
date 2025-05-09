@@ -1,5 +1,6 @@
 use file_system_solution::FileSystemError;
 use pluggable_interrupt_os::vga_buffer::{Color, ColorCode};
+use simple_interp::ArrayString;
 
 use crate::{FsType, MAX_FILENAME_BYTES};
 
@@ -34,6 +35,16 @@ impl Explorer {
         let n = fs.read(fd, buf)?;
         fs.close(fd)?;
         Ok(n)
+    }
+
+    pub fn name(&self) -> ArrayString<MAX_FILENAME_BYTES> {
+        let mut a: ArrayString<MAX_FILENAME_BYTES> = Default::default();
+
+        for c in self.name_as_slice(self.selected) {
+            a.push_char(*c as char);
+        }
+
+        a
     }
 
     fn name_as_slice(&self, i: usize) -> &[u8] {
