@@ -1,6 +1,5 @@
 use editor::TextEditor;
 use explorer::Explorer;
-use pluggable_interrupt_os::println;
 use script::RunningScript;
 use simple_interp::Interpreter;
 use window::Window;
@@ -12,6 +11,12 @@ pub mod explorer;
 mod script;
 pub mod window;
 
+// I chose to make an App enum instead of an
+// App trait because this gives me a concrete type
+// with a fixed size. I did not want to have
+// to figure out how to make an array of different
+// trait objects on bare metal, and this adds only a small
+// amount of code compared to the headache that it saved.
 pub enum App {
     TextEditor(TextEditor),
     Explorer(Explorer),

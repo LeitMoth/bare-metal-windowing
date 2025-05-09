@@ -62,6 +62,9 @@ impl RunningScript {
         }
     }
 
+    // returns true if we did any work, and false if we are blocked.
+    // lib.rs uses this to determine when to increment the tick
+    // counts in the task manager bar on the right of the screen.
     pub fn tick(&mut self) -> bool {
         match self.status {
             TickStatus::Continuing => {

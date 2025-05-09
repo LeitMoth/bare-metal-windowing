@@ -10,7 +10,7 @@ use pluggable_interrupt_os::vga_buffer::{
     is_drawable, plot, Color, ColorCode, BUFFER_HEIGHT, BUFFER_WIDTH,
 };
 use ramdisk::RamDisk;
-use simple_interp::{ArrayString, Interpreter, InterpreterOutput};
+use simple_interp::{ArrayString, Interpreter};
 
 use core::{fmt::Write, prelude::rust_2024::derive};
 
@@ -176,7 +176,6 @@ impl Active {
     }
 }
 
-// #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct SwimInterface {
     rename_bar: RenameBar,
     task_manager: TaskManager,
@@ -187,8 +186,8 @@ pub struct SwimInterface {
     last_ticked: usize,
 }
 
-// TODO(colin): add fields
 struct TaskManager;
+// TODO(colin): add fields
 struct RenameBar;
 
 impl TaskManager {
@@ -451,6 +450,8 @@ impl SwimInterface {
                 let window = self.apps[self.active as usize].exit();
                 self.apps[self.active as usize] =
                     App::Explorer(Explorer::new(window, &mut self.file_system));
+                // refresh display
+                self.switch_active(self.active);
             }
             KeyCode::ArrowLeft => self.apps[self.active as usize].arrow_left(),
             KeyCode::ArrowRight => self.apps[self.active as usize].arrow_right(),

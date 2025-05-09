@@ -1,7 +1,5 @@
 use pluggable_interrupt_os::vga_buffer::{plot, Color, ColorCode};
 
-use crate::{FsType, MAX_FILENAME_BYTES};
-
 #[derive(Debug, Clone)]
 pub struct Window {
     pub x1: u8,
@@ -39,6 +37,11 @@ impl Window {
     pub fn plot(&self, c: char, col: u8, row: u8, color: ColorCode) {
         let col = col + self.x1;
         let row = row + self.y1;
+        // In release mode these don't do anything, so realistically,
+        // a user of this OS would just see something draw outside of
+        // its window instead of the whole thing crashing.
+        // However, I prefer to have a crash to know as
+        // soon as something goes wrong in the debug builds.
         debug_assert!(self.x1 <= col && col <= self.x2);
         debug_assert!(self.y1 <= row && row <= self.y2);
         plot(c, col as usize, row as usize, color);
